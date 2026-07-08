@@ -169,6 +169,52 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 
 #map { height: 380px; border-radius: var(--radius); z-index: 0; }
 
+/* Essential Leaflet layout rules, kept locally because the CDN stylesheet
+   has failed to apply in some environments (v1 hit this too). Without
+   these, panes fall into normal flow and markers render below the map. */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.leaflet-container {
+  overflow: hidden;
+  position: relative;
+  outline-offset: 1px;
+}
+
+.leaflet-tile {
+  filter: inherit;
+  visibility: hidden;
+}
+
+.leaflet-tile-loaded { visibility: inherit; }
+
+.leaflet-marker-icon,
+.leaflet-marker-shadow { display: block; }
+
+.leaflet-container .leaflet-tile,
+.leaflet-container .leaflet-marker-icon { max-width: none !important; max-height: none !important; }
+
+.leaflet-pane { z-index: 400; }
+.leaflet-tile-pane { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane { z-index: 500; }
+.leaflet-marker-pane { z-index: 600; }
+.leaflet-tooltip-pane { z-index: 650; }
+.leaflet-popup-pane { z-index: 700; }
+.leaflet-zoom-animated { transform-origin: 0 0; }
+
 .map-card { overflow: hidden; }
 
 .leaflet-container { font-family: var(--font); background: #eef1ef; }
