@@ -1,0 +1,402 @@
+[
+  {
+    "id": "bengaluru",
+    "name": "Bengaluru",
+    "state": "Karnataka",
+    "region": "Deccan / Central",
+    "latitude": 12.97194,
+    "longitude": 77.59369,
+    "elevation_m": 920,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "bhopal",
+    "name": "Bhopal",
+    "state": "Madhya Pradesh",
+    "region": "Deccan / Central",
+    "latitude": 23.25469,
+    "longitude": 77.40289,
+    "elevation_m": 523,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "hyderabad",
+    "name": "Hyderabad",
+    "state": "Telangana",
+    "region": "Deccan / Central",
+    "latitude": 17.38405,
+    "longitude": 78.45636,
+    "elevation_m": 515,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "nagpur",
+    "name": "Nagpur",
+    "state": "Maharashtra",
+    "region": "Deccan / Central",
+    "latitude": 21.14631,
+    "longitude": 79.08491,
+    "elevation_m": 319,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "pune",
+    "name": "Pune",
+    "state": "Maharashtra",
+    "region": "Deccan / Central",
+    "latitude": 18.51957,
+    "longitude": 73.85535,
+    "elevation_m": 554,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "raipur",
+    "name": "Raipur",
+    "state": "Chhattisgarh",
+    "region": "Deccan / Central",
+    "latitude": 21.23333,
+    "longitude": 81.63333,
+    "elevation_m": 296,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "bhubaneswar",
+    "name": "Bhubaneswar",
+    "state": "Odisha",
+    "region": "East",
+    "latitude": 20.27241,
+    "longitude": 85.83385,
+    "elevation_m": 62,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "chennai",
+    "name": "Chennai",
+    "state": "Tamil Nadu",
+    "region": "East",
+    "latitude": 13.08784,
+    "longitude": 80.27847,
+    "elevation_m": 14,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "kolkata",
+    "name": "Kolkata",
+    "state": "West Bengal",
+    "region": "East",
+    "latitude": 22.56263,
+    "longitude": 88.36304,
+    "elevation_m": 11,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "ranchi",
+    "name": "Ranchi",
+    "state": "Jharkhand",
+    "region": "East",
+    "latitude": 23.34316,
+    "longitude": 85.3094,
+    "elevation_m": 643,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "visakhapatnam",
+    "name": "Visakhapatnam",
+    "state": "Andhra Pradesh",
+    "region": "East",
+    "latitude": 17.68009,
+    "longitude": 83.20161,
+    "elevation_m": 24,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "darjeeling",
+    "name": "Darjeeling",
+    "state": "West Bengal",
+    "region": "Eastern Himalaya",
+    "latitude": 27.03333,
+    "longitude": 88.26667,
+    "elevation_m": 2127,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "gangtok",
+    "name": "Gangtok",
+    "state": "Sikkim",
+    "region": "Eastern Himalaya",
+    "latitude": 27.32574,
+    "longitude": 88.61216,
+    "elevation_m": 1654,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "port-blair",
+    "name": "Port Blair",
+    "state": "Andaman and Nicobar",
+    "region": "Islands",
+    "latitude": 11.66613,
+    "longitude": 92.74635,
+    "elevation_m": 36,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "amritsar",
+    "name": "Amritsar",
+    "state": "Punjab",
+    "region": "North plains",
+    "latitude": 31.62234,
+    "longitude": 74.87534,
+    "elevation_m": 244,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "chandigarh",
+    "name": "Chandigarh",
+    "state": "Chandigarh",
+    "region": "North plains",
+    "latitude": 30.73629,
+    "longitude": 76.7884,
+    "elevation_m": 351,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "jaipur",
+    "name": "Jaipur",
+    "state": "Rajasthan",
+    "region": "North plains",
+    "latitude": 26.91962,
+    "longitude": 75.78781,
+    "elevation_m": 435,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "lucknow",
+    "name": "Lucknow",
+    "state": "Uttar Pradesh",
+    "region": "North plains",
+    "latitude": 26.83928,
+    "longitude": 80.92313,
+    "elevation_m": 126,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "new-delhi",
+    "name": "New Delhi",
+    "state": "Delhi",
+    "region": "North plains",
+    "latitude": 28.62137,
+    "longitude": 77.2148,
+    "elevation_m": 211,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "patna",
+    "name": "Patna",
+    "state": "Bihar",
+    "region": "North plains",
+    "latitude": 25.59408,
+    "longitude": 85.13563,
+    "elevation_m": 53,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "varanasi",
+    "name": "Varanasi",
+    "state": "Uttar Pradesh",
+    "region": "North plains",
+    "latitude": 25.31668,
+    "longitude": 83.01041,
+    "elevation_m": 86,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "cherrapunji",
+    "name": "Cherrapunji",
+    "state": "Meghalaya",
+    "region": "Northeast",
+    "latitude": 25.30089,
+    "longitude": 91.69619,
+    "elevation_m": 1505,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "guwahati",
+    "name": "Guwahati",
+    "state": "Assam",
+    "region": "Northeast",
+    "latitude": 26.1844,
+    "longitude": 91.7458,
+    "elevation_m": 59,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "shillong",
+    "name": "Shillong",
+    "state": "Meghalaya",
+    "region": "Northeast",
+    "latitude": 25.56892,
+    "longitude": 91.88313,
+    "elevation_m": 1507,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "madurai",
+    "name": "Madurai",
+    "state": "Tamil Nadu",
+    "region": "South",
+    "latitude": 9.919,
+    "longitude": 78.11953,
+    "elevation_m": 139,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "jaisalmer",
+    "name": "Jaisalmer",
+    "state": "Rajasthan",
+    "region": "Thar desert",
+    "latitude": 26.91763,
+    "longitude": 70.90387,
+    "elevation_m": 234,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "jodhpur",
+    "name": "Jodhpur",
+    "state": "Rajasthan",
+    "region": "Thar desert",
+    "latitude": 26.26841,
+    "longitude": 73.00594,
+    "elevation_m": 237,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "ahmedabad",
+    "name": "Ahmedabad",
+    "state": "Gujarat",
+    "region": "West",
+    "latitude": 23.02579,
+    "longitude": 72.58727,
+    "elevation_m": 56,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "kochi",
+    "name": "Kochi",
+    "state": "Kerala",
+    "region": "West",
+    "latitude": 9.93988,
+    "longitude": 76.26022,
+    "elevation_m": 9,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "mumbai",
+    "name": "Mumbai",
+    "state": "Maharashtra",
+    "region": "West",
+    "latitude": 19.07283,
+    "longitude": 72.88261,
+    "elevation_m": 8,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "panaji",
+    "name": "Panaji",
+    "state": "Goa",
+    "region": "West",
+    "latitude": 15.49574,
+    "longitude": 73.82624,
+    "elevation_m": 16,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "thiruvananthapuram",
+    "name": "Thiruvananthapuram",
+    "state": "Kerala",
+    "region": "West",
+    "latitude": 8.4855,
+    "longitude": 76.94924,
+    "elevation_m": 18,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "dehradun",
+    "name": "Dehradun",
+    "state": "Uttarakhand",
+    "region": "Western Himalaya",
+    "latitude": 30.32443,
+    "longitude": 78.03392,
+    "elevation_m": 664,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "gulmarg",
+    "name": "Gulmarg",
+    "state": "Jammu and Kashmir",
+    "region": "Western Himalaya",
+    "latitude": 34.0484,
+    "longitude": 74.3805,
+    "elevation_m": 2709,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "joshimath",
+    "name": "Joshimath",
+    "state": "Uttarakhand",
+    "region": "Western Himalaya",
+    "latitude": 30.5553,
+    "longitude": 79.5656,
+    "elevation_m": 1875,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "leh",
+    "name": "Leh",
+    "state": "Ladakh",
+    "region": "Western Himalaya",
+    "latitude": 34.1526,
+    "longitude": 77.5771,
+    "elevation_m": 3500,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "manali",
+    "name": "Manali",
+    "state": "Himachal Pradesh",
+    "region": "Western Himalaya",
+    "latitude": 32.2432,
+    "longitude": 77.1892,
+    "elevation_m": 2050,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "shimla",
+    "name": "Shimla",
+    "state": "Himachal Pradesh",
+    "region": "Western Himalaya",
+    "latitude": 31.1048,
+    "longitude": 77.1734,
+    "elevation_m": 2276,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "sonamarg",
+    "name": "Sonamarg",
+    "state": "Jammu and Kashmir",
+    "region": "Western Himalaya",
+    "latitude": 34.3,
+    "longitude": 75.3,
+    "elevation_m": 2730,
+    "timezone": "Asia/Kolkata"
+  },
+  {
+    "id": "srinagar",
+    "name": "Srinagar",
+    "state": "Jammu and Kashmir",
+    "region": "Western Himalaya",
+    "latitude": 34.0837,
+    "longitude": 74.7973,
+    "elevation_m": 1585,
+    "timezone": "Asia/Kolkata"
+  }
+]

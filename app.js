@@ -1,643 +1,969 @@
-const DATA_URL = "./public/data/anomaly_summary.json";
+"use strict";
+
+/* Unseasonable — India seasonal anomaly tracker (frontend v2)
+   Data contract: public/data/index.json + public/data/cities/<id>.json,
+   produced by scripts/build_dataset.py (schema 2.x). All charts are
+   hand-built SVG in the Field Brief palette. */
+
+const INDEX_URL = "./public/data/index.json";
+const CITY_URL = (id) => `./public/data/cities/${id}.json`;
 const LIVE_REFRESH_MS = 10 * 60 * 1000;
 
-const SIGNALS = {
-  extreme_heat: { label: "Extreme heat", color: "#b94a34" },
-  extreme_cold: { label: "Extreme cold", color: "#356b9a" },
-  heavy_precipitation: { label: "Heavy precipitation", color: "#6c5d9e" },
-  unseasonable_snow: { label: "Unseasonable snow", color: "#2f7d5b" },
-  within_seasonal_range: { label: "Seasonal range", color: "#687067" },
+const COLORS = {
+  heat: "#c25541",
+  cold: "#4478b8",
+  precip: "#159b7e",
+  snow: "#9b6fc7",
+  ochre: "#c77d1e",
+  charcoal: "#20262e",
+  slate: "#5f6d75",
+  mist: "#8ea0a8",
+  band: "#e7ecef",
+  navy: "#17324d",
 };
 
-const MAP_BOUNDS = {
-  minLat: 30.1,
-  maxLat: 34.8,
-  minLon: 73.6,
-  maxLon: 80.1,
+const FLAG_META = {
+  hot_extreme: { label: "Extreme heat", cls: "heat", color: COLORS.heat, rank: 0 },
+  cold_extreme: { label: "Extreme cold", cls: "cold", color: COLORS.cold, rank: 1 },
+  rare_snow: { label: "Rare-season snow", cls: "snow", color: COLORS.snow, rank: 2 },
+  exceptional_snow: { label: "Exceptional snow", cls: "snow", color: COLORS.snow, rank: 3 },
+  heavy_precip: { label: "Heavy precipitation", cls: "precip", color: COLORS.precip, rank: 4 },
+  warm_day: { label: "Warm day", cls: "heat", color: COLORS.heat, rank: 5 },
+  cold_night: { label: "Cold night", cls: "cold", color: COLORS.cold, rank: 6 },
 };
 
-const LABEL_OFFSETS = {
-  gulmarg: { x: 14, y: -18 },
-  sonamarg: { x: 18, y: 0 },
-  srinagar: { x: 14, y: 18 },
-  leh: { x: 16, y: 0 },
-  manali: { x: 14, y: 0 },
-  shimla: { x: 14, y: 0 },
-  joshimath: { x: -108, y: -18 },
+const VALIDATION_META = {
+  validated: { label: "Validated", cls: "v-validated" },
+  corroborated: { label: "Corroborated", cls: "v-corroborated" },
+  unverified: { label: "Unverified", cls: "v-unverified" },
+  contradicted: { label: "Contradicted", cls: "v-contradicted" },
 };
 
-let dashboardData = null;
-let selectedId = null;
-let liveById = {};
-let liveUpdatedAt = null;
-let map = null;
-let markers = {};
+const WEATHER_CODES = {
+  0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast",
+  45: "Fog", 48: "Rime fog", 51: "Light drizzle", 53: "Drizzle",
+  55: "Heavy drizzle", 61: "Light rain", 63: "Rain", 65: "Heavy rain",
+  71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+  80: "Light showers", 81: "Showers", 82: "Violent showers",
+  85: "Snow showers", 86: "Heavy snow showers", 95: "Thunderstorm",
+  96: "Thunderstorm w/ hail", 99: "Severe thunderstorm w/ hail",
+};
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+const state = {
+  index: null,
+  cities: new Map(),
+  selectedId: null,
+  map: null,
+  markers: new Map(),
+  liveTimer: null,
+};
 
-function pct(value) {
-  return `${Math.round(value * 100)}%`;
-}
-
-function fmt(value, digits = 1) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "n/a";
-  return Number(value).toFixed(digits);
-}
+/* ---------- null-safe DOM helpers (a render bug must never look like a
+   data failure — lesson from v1) ---------- */
 
 function byId(id) {
   return document.getElementById(id);
 }
 
 function setText(id, value) {
-  const element = byId(id);
-  if (element) element.textContent = value;
+  const node = byId(id);
+  if (node) node.textContent = value;
 }
 
 function setHtml(id, value) {
-  const element = byId(id);
-  if (element) element.innerHTML = value;
+  const node = byId(id);
+  if (node) node.innerHTML = value;
 }
 
-function prettyDate(dateText) {
-  return new Intl.DateTimeFormat("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(`${dateText}T00:00:00+05:30`));
+function esc(value) {
+  return String(value == null ? "" : value)
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
-function signalMeta(signal) {
-  return SIGNALS[signal] || SIGNALS.within_seasonal_range;
+function fmtDate(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function scoreColor(score) {
-  if (score >= 0.85) return "#b94a34";
-  if (score >= 0.65) return "#c47a22";
-  if (score >= 0.45) return "#6c5d9e";
-  return "#2f7d5b";
+function pctLabel(p) {
+  if (p == null) return "–";
+  return `${(p * 100).toFixed(1)}th`;
 }
 
-function locationIntensity(location) {
-  return clamp((location.kpis.recent_anomaly_days_365 || 0) / 120, 0, 1);
-}
+/* ---------- SVG helpers ---------- */
 
-function weatherCodeLabel(code) {
-  const labels = {
-    0: "Clear",
-    1: "Mostly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Fog",
-    48: "Rime fog",
-    51: "Light drizzle",
-    53: "Drizzle",
-    55: "Dense drizzle",
-    61: "Light rain",
-    63: "Rain",
-    65: "Heavy rain",
-    71: "Light snow",
-    73: "Snow",
-    75: "Heavy snow",
-    80: "Rain showers",
-    81: "Rain showers",
-    82: "Violent showers",
-    85: "Snow showers",
-    86: "Heavy snow showers",
-    95: "Thunderstorm",
-    96: "Thunderstorm with hail",
-    99: "Heavy thunderstorm with hail",
-  };
-  return labels[code] || "Current estimate";
-}
+const SVG_NS = "http://www.w3.org/2000/svg";
 
-function liveUrl(location) {
-  const params = new URLSearchParams({
-    latitude: location.latitude,
-    longitude: location.longitude,
-    current: [
-      "temperature_2m",
-      "precipitation",
-      "rain",
-      "showers",
-      "snowfall",
-      "weather_code",
-      "wind_speed_10m",
-    ].join(","),
-    timezone: "Asia/Kolkata",
-    forecast_days: "1",
-  });
-  return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
-}
-
-async function loadLiveLayer() {
-  if (!dashboardData) return;
-  const results = await Promise.allSettled(
-    dashboardData.locations.map(async (location) => {
-      const response = await fetch(liveUrl(location), { cache: "no-store" });
-      if (!response.ok) throw new Error(`${location.id}: HTTP ${response.status}`);
-      const payload = await response.json();
-      return [location.id, payload.current];
-    }),
-  );
-
-  const nextLive = {};
-  results.forEach((result) => {
-    if (result.status === "fulfilled") {
-      const [id, current] = result.value;
-      nextLive[id] = current;
-    }
-  });
-
-  if (Object.keys(nextLive).length) {
-    liveById = nextLive;
-    liveUpdatedAt = new Date();
-    setText("livePill", `Live ${liveUpdatedAt.toLocaleTimeString("en", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`);
-  } else {
-    setText("livePill", "Live layer unavailable");
+function el(tag, attrs = {}, parent = null) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value != null) node.setAttribute(key, value);
   }
-  renderMap();
-  renderSelected();
+  if (parent) parent.appendChild(node);
+  return node;
 }
 
-async function loadData() {
-  let response;
-  try {
-    response = await fetch(DATA_URL, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    dashboardData = await response.json();
-  } catch (error) {
-    const workspace = document.querySelector(".workspace");
-    if (workspace) {
-      workspace.innerHTML = `
-      <section class="tool-panel empty-state">
-        <div>
-          <strong>Dataset not found</strong>
-          <p>Run <code>python3 scripts/build_dataset.py</code> and serve the repository root.</p>
-          <p>${error.message}</p>
-        </div>
-      </section>
-    `;
-    }
-    return;
+function linePath(points) {
+  let path = "";
+  let pen = false;
+  for (const point of points) {
+    if (!point) { pen = false; continue; }
+    path += `${pen ? "L" : "M"}${point[0].toFixed(1)},${point[1].toFixed(1)}`;
+    pen = true;
   }
+  return path;
+}
 
-  try {
-    selectedId = dashboardData.locations[0]?.id;
-    render();
-    loadLiveLayer();
-    window.setInterval(loadLiveLayer, LIVE_REFRESH_MS);
-  } catch (error) {
-    const workspace = document.querySelector(".workspace");
-    if (workspace) {
-      workspace.innerHTML = `
-        <section class="tool-panel empty-state">
-          <div>
-            <strong>Dashboard render error</strong>
-            <p>The dataset loaded, but the page shell and script are out of sync. Refresh the page.</p>
-            <p>${error.message}</p>
-          </div>
-        </section>
-      `;
-    }
-    throw error;
+function makeTip(wrap) {
+  let tip = wrap.querySelector(".chart-tip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.className = "chart-tip";
+    wrap.appendChild(tip);
   }
+  return tip;
 }
 
-function render() {
-  const generated = new Date(dashboardData.generated_at_utc);
-  setText("generatedAt", `Generated ${generated.toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}`);
-  setText("locationCount", dashboardData.locations.length);
+/* Crosshair + tooltip: `locate(fractionX)` returns {html, px, py} or null. */
+function attachHover(wrap, svg, width, height, margins, locate) {
+  const tip = makeTip(wrap);
+  const cross = el("line", {
+    y1: margins.top, y2: height - margins.bottom,
+    stroke: COLORS.mist, "stroke-width": 1, "stroke-dasharray": "3,3", opacity: 0,
+  }, svg);
+  const halo = el("circle", { r: 4.5, fill: "none", stroke: COLORS.charcoal, "stroke-width": 1.5, opacity: 0 }, svg);
 
-  renderLocationList();
-  renderMap();
-  renderSelected();
-}
-
-function selectedLocation() {
-  return dashboardData.locations.find((location) => location.id === selectedId) || dashboardData.locations[0];
-}
-
-function renderLocationList() {
-  const container = byId("locationList");
-  if (!container) return;
-  container.innerHTML = dashboardData.locations
-    .map((location) => {
-      const score = locationIntensity(location);
-      return `
-        <button class="location-button ${location.id === selectedId ? "active" : ""}" data-location="${location.id}">
-          <i class="severity-dot" style="background:${scoreColor(score)}; box-shadow:0 0 0 4px ${scoreColor(score)}22"></i>
-          <span>
-            <strong>${location.name}</strong>
-            <span>${location.region}</span>
-          </span>
-          <span class="location-score">${location.kpis.recent_anomaly_days_365}</span>
-        </button>
-      `;
-    })
-    .join("");
-
-  container.querySelectorAll("button").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedId = button.dataset.location;
-      render();
-    });
-  });
-}
-
-function markerHtml(location) {
-  const score = locationIntensity(location);
-  const live = liveById[location.id];
-  const hasSnow = Number(live?.snowfall || 0) > 0;
-  const hasRain = Number(live?.precipitation || 0) > 0.2;
-  return `
-    <span class="leaflet-signal-marker ${location.id === selectedId ? "active" : ""}" style="--marker-color:${scoreColor(score)}">
-      <span>${location.kpis.recent_anomaly_days_365}</span>
-      ${hasSnow ? '<i class="weather-chip snow">snow</i>' : ""}
-      ${!hasSnow && hasRain ? '<i class="weather-chip rain">rain</i>' : ""}
-    </span>
-  `;
-}
-
-function markerIcon(location) {
-  return L.divIcon({
-    className: "signal-marker-shell",
-    html: markerHtml(location),
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-  });
-}
-
-function renderFallbackMap(container) {
-  container.innerHTML = dashboardData.locations
-    .map((location) => {
-      const left = clamp(
-        ((location.longitude - MAP_BOUNDS.minLon) / (MAP_BOUNDS.maxLon - MAP_BOUNDS.minLon)) * 100,
-        5,
-        95,
-      );
-      const top = clamp(
-        ((MAP_BOUNDS.maxLat - location.latitude) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)) * 100,
-        8,
-        92,
-      );
-      const score = locationIntensity(location);
-      const color = scoreColor(score);
-      const offset = LABEL_OFFSETS[location.id] || { x: 14, y: 0 };
-      return `
-        <button
-          class="map-point ${location.id === selectedId ? "active" : ""}"
-          data-location="${location.id}"
-          aria-label="${location.name}"
-          style="left:${left}%; top:${top}%; background:${color}"
-        ></button>
-        <span class="map-label" style="left:${left}%; top:${top}%; transform:translate(${offset.x}px, ${offset.y}px)">${location.name}</span>
-      `;
-    })
-    .join("");
-
-  container.querySelectorAll("button").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedId = button.dataset.location;
-      render();
-    });
-  });
-}
-
-function renderMap() {
-  const container = byId("regionMap");
-  if (!container) return;
-  if (!window.L) {
-    renderFallbackMap(container);
-    return;
-  }
-
-  if (!map) {
-    map = L.map("regionMap", {
-      zoomControl: false,
-      scrollWheelZoom: false,
-    });
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 12,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
-    const bounds = L.latLngBounds(dashboardData.locations.map((location) => [location.latitude, location.longitude]));
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7 });
-    window.setTimeout(() => map.invalidateSize(), 0);
-    window.setTimeout(() => map.invalidateSize(), 250);
-  }
-
-  dashboardData.locations.forEach((location) => {
-    const live = liveById[location.id];
-    const tooltip = live
-      ? `${location.name}: ${fmt(live.temperature_2m)}C, ${weatherCodeLabel(live.weather_code)}`
-      : `${location.name}: ${location.kpis.recent_anomaly_days_365} anomaly days`;
-    if (!markers[location.id]) {
-      markers[location.id] = L.marker([location.latitude, location.longitude], {
-        icon: markerIcon(location),
-        riseOnHover: true,
-      }).addTo(map);
-      markers[location.id].on("click", () => {
-        selectedId = location.id;
-        render();
-      });
+  function onMove(event) {
+    const rect = svg.getBoundingClientRect();
+    const fx = ((event.clientX - rect.left) / rect.width) * width;
+    const hit = locate(fx);
+    if (!hit) { onLeave(); return; }
+    cross.setAttribute("x1", hit.px);
+    cross.setAttribute("x2", hit.px);
+    cross.setAttribute("opacity", 1);
+    if (hit.py != null) {
+      halo.setAttribute("cx", hit.px);
+      halo.setAttribute("cy", hit.py);
+      halo.setAttribute("opacity", 1);
     } else {
-      markers[location.id].setIcon(markerIcon(location));
+      halo.setAttribute("opacity", 0);
     }
-    markers[location.id].bindTooltip(tooltip, {
-      permanent: location.id === selectedId,
-      direction: "top",
-      className: "map-tooltip",
-      offset: [0, -16],
-    });
-  });
-  window.setTimeout(() => map.invalidateSize(), 0);
+    tip.innerHTML = hit.html;
+    tip.style.opacity = 1;
+    const wrapRect = wrap.getBoundingClientRect();
+    const tipW = tip.offsetWidth;
+    let left = ((hit.px / width) * rect.width) + (rect.left - wrapRect.left) + 14;
+    if (left + tipW > wrapRect.width - 8) left = left - tipW - 28;
+    tip.style.left = `${Math.max(4, left)}px`;
+    tip.style.top = `${event.clientY - wrapRect.top - window.scrollY * 0 + 12}px`;
+  }
+
+  function onLeave() {
+    tip.style.opacity = 0;
+    cross.setAttribute("opacity", 0);
+    halo.setAttribute("opacity", 0);
+  }
+
+  svg.addEventListener("mousemove", onMove);
+  svg.addEventListener("mouseleave", onLeave);
 }
 
-function renderSelected() {
-  const location = selectedLocation();
-  setText("selectedRegion", `${location.region} / ${location.state}`);
-  setText("selectedName", location.name);
-  setText("terrainNote", location.terrain_note);
+/* ---------- boot ---------- */
 
-  renderPlainSummary(location);
-  renderLivePanel(location);
-  renderKpis(location);
-  renderDailyChart(location);
-  renderMonthlyChart(location);
-  renderEvents(location);
-  renderAnnualChart(location);
-}
+async function boot() {
+  let index;
+  try {
+    const res = await fetch(INDEX_URL, { cache: "no-cache" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    index = await res.json();
+  } catch (error) {
+    setHtml(
+      "detail-status",
+      `Dataset could not be loaded (${esc(error.message)}). ` +
+      "If running locally: <code>python3 scripts/build_dataset.py</code> then serve the repo root."
+    );
+    const status = byId("detail-status");
+    if (status) status.classList.add("error");
+    return;
+  }
 
-function renderPlainSummary(location) {
-  const topSignals = [
-    ["heat", location.kpis.recent_heat_days_365],
-    ["heavy rain", location.kpis.recent_heavy_precip_days_365],
-    ["cold", location.kpis.recent_cold_days_365],
-    ["rare snow", location.kpis.recent_unseasonable_snow_days_365],
-  ].sort((a, b) => b[1] - a[1]);
-  const [mainSignal, mainCount] = topSignals[0];
-  const days = location.kpis.recent_anomaly_days_365;
-  setText("plainSummary", `${location.name} has ${days} recent anomaly days; ${mainSignal} is the dominant signal.`);
+  state.index = index;
   setText(
-    "plainSummaryDetail",
-    `${mainCount} days in the last 365 available days were flagged for ${mainSignal}. This is a screening result from ERA5, not an official impact claim.`,
+    "generated-note",
+    `ERA5 via Open-Meteo · updated ${fmtDate(index.generated_at_utc.slice(0, 10))}`
   );
+
+  renderNational();
+  renderCityList("");
+  initMap();
+
+  const search = byId("city-search");
+  if (search) search.addEventListener("input", () => renderCityList(search.value));
+
+  const backdrop = byId("modal-backdrop");
+  if (backdrop) {
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) closeModal();
+    });
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeModal();
+  });
+
+  const fromHash = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+  const initial =
+    index.cities.find((c) => c.id === fromHash) || pickDefaultCity(index.cities);
+  if (initial) selectCity(initial.id);
 }
 
-function renderLivePanel(location) {
-  const live = liveById[location.id];
-  const livePanel = byId("livePanel");
-  if (!live) {
-    if (livePanel) {
-      livePanel.innerHTML = `
-      <span class="live-dot muted"></span>
-      <div>
-        <strong>Live layer not loaded yet</strong>
-        <p>Historical anomaly metrics below still use the daily ERA5 dataset.</p>
-      </div>
-    `;
-    }
-    setText("liveSummary", "Live estimates are still loading.");
-    setText("liveSummaryDetail", "If the live endpoint fails, the dashboard remains usable as a historical anomaly screen.");
-    return;
-  }
-
-  const condition = weatherCodeLabel(live.weather_code);
-  const updated = liveUpdatedAt
-    ? liveUpdatedAt.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })
-    : "now";
-  const precipitation = Number(live.precipitation || 0);
-  const snowfall = Number(live.snowfall || 0);
-  const liveSignal =
-    snowfall > 0 ? `${fmt(snowfall)} cm snow estimate` : precipitation > 0 ? `${fmt(precipitation)} mm precipitation` : condition;
-
-  if (livePanel) {
-    livePanel.innerHTML = `
-    <span class="live-dot"></span>
-    <div>
-      <strong>${fmt(live.temperature_2m)}C · ${condition}</strong>
-      <p>${liveSignal}; wind ${fmt(live.wind_speed_10m)} km/h. Updated ${updated}. Source: forecast/nowcast estimate.</p>
-    </div>
-  `;
-  }
-  setText("liveSummary", `${location.name}: ${fmt(live.temperature_2m)}C and ${condition.toLowerCase()}.`);
-  setText("liveSummaryDetail", "This updates in the browser about every 10 minutes and is separate from the slower historical anomaly layer.");
+function pickDefaultCity(cities) {
+  const flagged = cities
+    .filter((c) => c.latest_flag)
+    .sort((a, b) => {
+      const dateCmp = b.latest_flag.date.localeCompare(a.latest_flag.date);
+      if (dateCmp !== 0) return dateCmp;
+      return bestRank(a.latest_flag.flags) - bestRank(b.latest_flag.flags);
+    });
+  return flagged[0] || cities[0];
 }
 
-function renderKpis(location) {
-  const kpis = [
-    ["Anomaly days", location.kpis.recent_anomaly_days_365, "last 365 available days"],
-    ["Heavy rain days", location.kpis.recent_heavy_precip_days_365, "95th percentile threshold"],
-    ["Heat days", location.kpis.recent_heat_days_365, "daily max above seasonal p95"],
-    ["Cold days", location.kpis.recent_cold_days_365, "daily min below seasonal p05"],
-    ["Snow flags", location.kpis.recent_unseasonable_snow_days_365, "rare snowfall for date window"],
-    ["Max score", Math.round(location.kpis.max_recent_score_365 * 100), "screening rank, not attribution"],
+function bestRank(flags) {
+  return Math.min(...flags.map((f) => (FLAG_META[f] ? FLAG_META[f].rank : 9)));
+}
+
+function bestFlag(flags) {
+  return [...flags].sort((a, b) => (FLAG_META[a]?.rank ?? 9) - (FLAG_META[b]?.rank ?? 9))[0];
+}
+
+/* ---------- national summary ---------- */
+
+function renderNational() {
+  const cities = state.index.cities;
+  const recentEnd = state.index.recent_end;
+  const weekAgo = addDays(recentEnd, -7);
+  const flaggedWeek = cities.filter(
+    (c) => c.latest_flag && c.latest_flag.date >= weekAgo
+  );
+  const notable = [...flaggedWeek]
+    .sort(
+      (a, b) =>
+        b.latest_flag.date.localeCompare(a.latest_flag.date) ||
+        bestRank(a.latest_flag.flags) - bestRank(b.latest_flag.flags)
+    )
+    .slice(0, 4);
+
+  const rows = [
+    `<div class="row"><span>Cities with a flagged day in the last week of data</span><b>${flaggedWeek.length} of ${cities.length}</b></div>`,
   ];
-  setHtml(
-    "kpiGrid",
-    kpis
-      .map(
-        ([label, value, note]) => `
-        <div class="kpi">
-          <span>${label}</span>
-          <strong>${value}</strong>
-          <em>${note}</em>
-        </div>
-      `,
-      )
-      .join(""),
+  for (const c of notable) {
+    const flag = bestFlag(c.latest_flag.flags);
+    const meta = FLAG_META[flag] || { label: flag, cls: "" };
+    rows.push(
+      `<div class="row"><span><a href="#${c.id}" data-city="${c.id}">${esc(c.name)}</a> · ${fmtDate(c.latest_flag.date)}</span><span class="badge ${meta.cls}">${meta.label}</span></div>`
+    );
+  }
+  rows.push(
+    `<div class="row"><span class="tip-muted" style="color:var(--mist)">Reanalysis lag: data runs to ${fmtDate(recentEnd)}</span></div>`
+  );
+  setHtml("national-summary", rows.join(""));
+  const box = byId("national-summary");
+  if (box) {
+    box.querySelectorAll("a[data-city]").forEach((a) =>
+      a.addEventListener("click", (event) => {
+        event.preventDefault();
+        selectCity(a.dataset.city);
+      })
+    );
+  }
+}
+
+function addDays(iso, delta) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/* ---------- city list ---------- */
+
+function renderCityList(query) {
+  const listNode = byId("city-list");
+  if (!listNode) return;
+  const q = query.trim().toLowerCase();
+  const groups = new Map();
+  for (const city of state.index.cities) {
+    if (q && !`${city.name} ${city.state} ${city.region}`.toLowerCase().includes(q)) continue;
+    if (!groups.has(city.region)) groups.set(city.region, []);
+    groups.get(city.region).push(city);
+  }
+  const parts = [];
+  for (const [region, cities] of groups) {
+    parts.push(`<div class="region-label">${esc(region)}</div>`);
+    for (const city of cities) {
+      const flag = city.latest_flag ? bestFlag(city.latest_flag.flags) : null;
+      const color = flag ? FLAG_META[flag].color : "#d3dbdf";
+      const active = city.id === state.selectedId ? " active" : "";
+      const sub = city.latest_flag ? fmtDate(city.latest_flag.date) : "no recent flags";
+      parts.push(
+        `<button class="city-row${active}" data-city="${city.id}">
+          <span class="flag-dot" style="background:${color}"></span>
+          <span>${esc(city.name)}</span>
+          <span class="sub">${sub}</span>
+        </button>`
+      );
+    }
+  }
+  listNode.innerHTML = parts.join("") || `<div class="status-note">No matches.</div>`;
+  listNode.querySelectorAll("button[data-city]").forEach((btn) =>
+    btn.addEventListener("click", () => selectCity(btn.dataset.city))
   );
 }
 
-function svgFrame(width = 720, height = 310) {
-  return { width, height, pad: { top: 18, right: 18, bottom: 36, left: 44 } };
-}
+/* ---------- map ---------- */
 
-function renderDailyChart(location) {
-  const records = location.last_45_days || [];
-  if (!records.length) {
-    setHtml("dailyChart", `<div class="empty-state">No daily records</div>`);
+function initMap() {
+  const mapNode = byId("map");
+  if (!mapNode) return;
+  if (typeof L === "undefined") {
+    mapNode.outerHTML = `<div class="status-note">Map unavailable (Leaflet failed to load). Use the city list below.</div>`;
     return;
   }
-  const { width, height, pad } = svgFrame();
-  const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
-  const anomalies = records.map((d) => Number(d.tmax_anomaly_c || 0));
-  const precip = records.map((d) => Number(d.precip_mm || 0));
-  const maxAbs = Math.max(4, ...anomalies.map(Math.abs));
-  const maxPrecip = Math.max(5, ...precip);
-  const zeroY = pad.top + innerH / 2;
-  const step = innerW / records.length;
+  const map = L.map("map", {
+    zoomControl: true,
+    scrollWheelZoom: false,
+    attributionControl: true,
+  });
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: "© OpenStreetMap contributors © CARTO",
+    subdomains: "abcd",
+    maxZoom: 12,
+  }).addTo(map);
+  map.fitBounds([[7.5, 68.0], [35.5, 93.5]]);
+  state.map = map;
 
-  const bars = records
-    .map((record, index) => {
-      const anomaly = Number(record.tmax_anomaly_c || 0);
-      const x = pad.left + index * step + step * 0.15;
-      const barW = Math.max(3, step * 0.7);
-      const y = anomaly >= 0 ? zeroY - (Math.abs(anomaly) / maxAbs) * (innerH / 2) : zeroY;
-      const h = Math.max(1, (Math.abs(anomaly) / maxAbs) * (innerH / 2));
-      const color = anomaly >= 0 ? "#b94a34" : "#356b9a";
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${color}" opacity="0.86" />`;
-    })
-    .join("");
-
-  const rainLine = records
-    .map((record, index) => {
-      const x = pad.left + index * step + step / 2;
-      const y = pad.top + innerH - (Number(record.precip_mm || 0) / maxPrecip) * innerH;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-
-  const labels = [
-    `<text x="${pad.left}" y="${height - 12}" fill="#687067" font-size="11">${prettyDate(records[0].date)}</text>`,
-    `<text x="${width - pad.right}" y="${height - 12}" text-anchor="end" fill="#687067" font-size="11">${prettyDate(records[records.length - 1].date)}</text>`,
-    `<text x="${pad.left}" y="${pad.top + 10}" fill="#687067" font-size="11">+${maxAbs.toFixed(0)}C</text>`,
-    `<text x="${pad.left}" y="${height - pad.bottom}" fill="#687067" font-size="11">-${maxAbs.toFixed(0)}C</text>`,
-  ].join("");
-
-  setHtml(
-    "dailyChart",
-    `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily temperature anomaly chart">
-      <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#fbfcfa" />
-      <line x1="${pad.left}" x2="${width - pad.right}" y1="${zeroY}" y2="${zeroY}" stroke="#222521" stroke-opacity="0.22" />
-      ${bars}
-      <path d="${rainLine}" fill="none" stroke="#2f7d5b" stroke-width="3" stroke-linecap="round" opacity="0.86" />
-      <circle cx="${width - 118}" cy="24" r="5" fill="#b94a34" />
-      <text x="${width - 106}" y="28" fill="#687067" font-size="12">warm anomaly</text>
-      <circle cx="${width - 118}" cy="45" r="5" fill="#356b9a" />
-      <text x="${width - 106}" y="49" fill="#687067" font-size="12">cool anomaly</text>
-      <path d="M${width - 122},66 L${width - 112},66" stroke="#2f7d5b" stroke-width="3" />
-      <text x="${width - 106}" y="70" fill="#687067" font-size="12">precipitation</text>
-      ${labels}
-    </svg>
-  `,
-  );
+  for (const city of state.index.cities) {
+    const marker = L.marker([city.latitude, city.longitude], {
+      icon: cityIcon(city, false),
+      title: city.name,
+    }).addTo(map);
+    marker.on("click", () => selectCity(city.id));
+    marker.bindTooltip(city.name, { direction: "top", offset: [0, -6] });
+    state.markers.set(city.id, marker);
+  }
 }
 
-function renderMonthlyChart(location) {
-  const records = location.monthly || [];
-  if (!records.length) {
-    setHtml("monthlyChart", `<div class="empty-state">No monthly records</div>`);
+function cityIcon(city, selected) {
+  const flag = city.latest_flag ? bestFlag(city.latest_flag.flags) : null;
+  const color = flag ? FLAG_META[flag].color : "#c3ccd1";
+  const size = selected ? 18 : 12;
+  return L.divIcon({
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<span class="city-dot" style="width:${size}px;height:${size}px;background:${color};${selected ? "box-shadow:0 0 0 3px rgba(23,50,77,.45);" : ""}"></span>`,
+  });
+}
+
+function refreshMarkers() {
+  if (!state.map) return;
+  for (const city of state.index.cities) {
+    const marker = state.markers.get(city.id);
+    if (marker) marker.setIcon(cityIcon(city, city.id === state.selectedId));
+  }
+}
+
+/* ---------- city selection ---------- */
+
+async function selectCity(id) {
+  if (!state.index) return;
+  const entry = state.index.cities.find((c) => c.id === id);
+  if (!entry) return;
+  state.selectedId = id;
+  location.hash = id;
+  refreshMarkers();
+  renderCityList(byId("city-search") ? byId("city-search").value : "");
+
+  const status = byId("detail-status");
+  if (status) {
+    status.hidden = false;
+    status.classList.remove("error");
+    status.textContent = `Loading ${entry.name}…`;
+  }
+
+  let city = state.cities.get(id);
+  if (!city) {
+    try {
+      const res = await fetch(CITY_URL(id), { cache: "no-cache" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      city = await res.json();
+      state.cities.set(id, city);
+    } catch (error) {
+      if (status) {
+        status.classList.add("error");
+        status.textContent = `Could not load ${entry.name}: ${error.message}`;
+      }
+      return;
+    }
+  }
+  if (state.selectedId !== id) return; // user moved on mid-fetch
+
+  try {
+    if (status) status.hidden = true;
+    renderHeader(city);
+    renderKpis(city);
+    renderTrendChart(city);
+    renderRibbonChart(city);
+    renderPrecipChart(city);
+    renderEvents(city);
+    scheduleLive(city);
+  } catch (error) {
+    if (status) {
+      status.hidden = false;
+      status.classList.add("error");
+      status.textContent = `Dashboard render error: ${error.message}`;
+    }
+    console.error(error);
+  }
+}
+
+/* ---------- header + live ---------- */
+
+function renderHeader(city) {
+  const header = byId("city-header");
+  if (header) header.hidden = false;
+  setText("city-name", city.meta.name);
+  setText("city-where", `${city.meta.state} · ${city.meta.region}`);
+  const cellElev = city.meta.grid_cell_elevation_m;
+  const townElev = city.meta.town_elevation_m;
+  let elevNote = "";
+  if (cellElev != null && townElev != null) {
+    const gap = Math.abs(cellElev - townElev);
+    elevNote =
+      `Values describe the ERA5 grid cell (<b>${Math.round(cellElev)} m</b>), not the town point (<b>${Math.round(townElev)} m</b>).` +
+      (gap > 300 ? " In steep terrain treat this as the surrounding landscape, not the town itself." : "");
+  }
+  setHtml("city-elev", elevNote);
+}
+
+function scheduleLive(city) {
+  if (state.liveTimer) clearInterval(state.liveTimer);
+  fetchLive(city);
+  state.liveTimer = setInterval(() => fetchLive(city), LIVE_REFRESH_MS);
+}
+
+async function fetchLive(city) {
+  const strip = byId("live-strip");
+  if (!strip) return;
+  const url =
+    "https://api.open-meteo.com/v1/forecast" +
+    `?latitude=${city.meta.latitude}&longitude=${city.meta.longitude}` +
+    "&current=temperature_2m,precipitation,snowfall,weather_code,wind_speed_10m&timezone=Asia%2FKolkata";
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const payload = await res.json();
+    if (state.selectedId !== city.meta.id) return;
+    const current = payload.current || {};
+    const chips = [
+      `<span class="live-chip"><b>${current.temperature_2m != null ? current.temperature_2m.toFixed(1) : "–"}°C</b></span>`,
+      `<span class="live-chip">${esc(WEATHER_CODES[current.weather_code] || "—")}</span>`,
+      `<span class="live-chip">precip ${current.precipitation != null ? current.precipitation : "–"} mm</span>`,
+      `<span class="live-chip">wind ${current.wind_speed_10m != null ? Math.round(current.wind_speed_10m) : "–"} km/h</span>`,
+    ];
+    strip.innerHTML =
+      `<span class="live-tag">Now · nowcast</span>${chips.join("")}` +
+      `<span style="color:var(--mist)">forecast-model estimate — weakest evidence tier, no effect on anomaly flags</span>`;
+  } catch {
+    strip.innerHTML = `<span class="live-tag">Now</span><span style="color:var(--mist)">live conditions unavailable</span>`;
+  }
+}
+
+/* ---------- KPI cards ---------- */
+
+function renderKpis(city) {
+  const k = city.kpis;
+  const cards = [];
+  const defs = [
+    ["heat", "Warm days · 365d", k.warm_days, k.warm_days_expected, "beyond seasonal p90"],
+    ["heat", "Extreme heat · 365d", k.hot_extreme_days, k.hot_extreme_days_expected, "beyond seasonal p95"],
+    ["cold", "Cold nights · 365d", k.cold_nights, k.cold_nights_expected, "below seasonal p10"],
+    ["precip", "Heavy precip · 365d", k.heavy_precip_days, k.heavy_precip_days_expected, "wet-day p95 exceeded"],
+  ];
+  if (city.meta.snow_capable) {
+    defs.push([
+      "snow",
+      "Unusual snow · 365d",
+      (k.rare_snow_days || 0) + (k.exceptional_snow_days || 0),
+      null,
+      "rare-season or exceptional amount",
+    ]);
+  }
+  for (const [cls, label, value, expected, note] of defs) {
+    cards.push(
+      `<div class="kpi ${cls}">
+        <div class="label">${esc(label)}</div>
+        <p class="value">${value != null ? value : "–"}</p>
+        <div class="expected">${
+          expected != null
+            ? `vs <b>≈${expected}</b> expected under 1991–2020 climate`
+            : esc(note)
+        }</div>
+      </div>`
+    );
+  }
+  setHtml("kpi-cards", cards.join(""));
+}
+
+/* ---------- trend chart ---------- */
+
+function renderTrendChart(city) {
+  const wrap = byId("trend-chart");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+
+  const years = city.annual.filter(
+    (a) => a.coverage_days >= 350 && a.warm_day_fraction != null
+  );
+  if (years.length < 5) {
+    wrap.innerHTML = `<div class="status-note">Not enough annual data.</div>`;
     return;
   }
-  const { width, height, pad } = svgFrame();
-  const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
-  const maxPrecip = Math.max(10, ...records.map((d) => d.total_precip_mm || 0));
-  const maxScore = Math.max(1, ...records.map((d) => d.max_anomaly_score || 0));
-  const step = innerW / records.length;
 
-  const bars = records
-    .map((record, index) => {
-      const x = pad.left + index * step + step * 0.18;
-      const barW = Math.max(4, step * 0.64);
-      const h = ((record.total_precip_mm || 0) / maxPrecip) * innerH;
-      const y = pad.top + innerH - h;
-      const score = record.max_anomaly_score || 0;
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1, h).toFixed(1)}" rx="3" fill="${scoreColor(score)}" opacity="${0.38 + (score / maxScore) * 0.48}" />`;
-    })
-    .join("");
+  const W = 880, H = 270;
+  const M = { top: 16, right: 118, bottom: 30, left: 46 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+  svg.setAttribute("aria-label", "Annual share of days outside the seasonal normal");
+  wrap.appendChild(svg);
 
-  const line = records
-    .map((record, index) => {
-      const x = pad.left + index * step + step / 2;
-      const normalized = clamp(((record.mean_tmax_anomaly_c || 0) + 6) / 12, 0, 1);
-      const y = pad.top + innerH - normalized * innerH;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const x0 = years[0].year, x1 = years[years.length - 1].year;
+  const maxY = Math.max(
+    0.25,
+    ...years.map((a) => Math.max(a.warm_day_fraction, a.cold_night_fraction || 0))
+  ) * 1.08;
+  const X = (year) => M.left + ((year - x0) / (x1 - x0)) * (W - M.left - M.right);
+  const Y = (frac) => H - M.bottom - (frac / maxY) * (H - M.top - M.bottom);
+
+  // baseline-era shading
+  el("rect", {
+    x: X(1991), y: M.top, width: X(2020) - X(1991), height: H - M.top - M.bottom,
+    fill: "#eef3f2", opacity: 0.75,
+  }, svg);
+  el("text", {
+    x: X(2005), y: M.top + 12, "text-anchor": "middle", class: "axis-label",
+  }, svg).textContent = "baseline 1991–2020";
+
+  // y grid + labels
+  for (let f = 0; f <= maxY; f += 0.1) {
+    const y = Y(f);
+    el("line", { x1: M.left, x2: W - M.right, y1: y, y2: y, class: "grid-line" }, svg);
+    el("text", { x: M.left - 8, y: y + 4, "text-anchor": "end", class: "axis-label" }, svg)
+      .textContent = `${Math.round(f * 100)}%`;
+  }
+  // x labels each decade
+  for (let year = Math.ceil(x0 / 10) * 10; year <= x1; year += 10) {
+    el("text", { x: X(year), y: H - 8, "text-anchor": "middle", class: "axis-label" }, svg)
+      .textContent = year;
+  }
+
+  // null-expectation reference
+  el("line", {
+    x1: M.left, x2: W - M.right, y1: Y(0.1), y2: Y(0.1),
+    stroke: COLORS.ochre, "stroke-width": 1.6, "stroke-dasharray": "6,4",
+  }, svg);
+  el("text", {
+    x: W - M.right + 6, y: Y(0.1) + 4, class: "axis-label", fill: COLORS.ochre,
+  }, svg).textContent = "expected ≈10%";
+
+  const smooth = (key) =>
+    years.map((row, i) => {
+      const near = years.filter(
+        (b) => Math.abs(b.year - row.year) <= 4 && b[key] != null
+      );
+      return near.length >= 5 ? near.reduce((s, b) => s + b[key], 0) / near.length : null;
+    });
+
+  const series = [
+    { key: "warm_day_fraction", color: COLORS.heat, label: "Warm days" },
+    { key: "cold_night_fraction", color: COLORS.cold, label: "Cold nights" },
+  ];
+  for (const s of series) {
+    // annual values recede; the 9-year mean carries the story
+    el("path", {
+      d: linePath(years.map((a) => (a[s.key] == null ? null : [X(a.year), Y(a[s.key])]))),
+      fill: "none", stroke: s.color, "stroke-width": 1, opacity: 0.28,
+      "stroke-linejoin": "round",
+    }, svg);
+    const smoothed = smooth(s.key);
+    const pts = years.map((a, i) => (smoothed[i] == null ? null : [X(a.year), Y(smoothed[i])]));
+    el("path", {
+      d: linePath(pts), fill: "none", stroke: s.color, "stroke-width": 2.6,
+      "stroke-linejoin": "round", "stroke-linecap": "round",
+    }, svg);
+    const last = pts.filter(Boolean).at(-1);
+    if (last) {
+      el("circle", { cx: last[0], cy: last[1], r: 3, fill: s.color }, svg);
+      const label = el("text", {
+        x: W - M.right + 6, y: last[1] + 4, "font-size": 12, "font-weight": 700, fill: s.color,
+      }, svg);
+      label.textContent = s.label;
+    }
+  }
+  // avoid label overlap: nudge if close
+  const labels = [...svg.querySelectorAll("text")].filter((t) =>
+    ["Warm days", "Cold nights"].includes(t.textContent)
+  );
+  if (labels.length === 2) {
+    const y0v = parseFloat(labels[0].getAttribute("y"));
+    const y1v = parseFloat(labels[1].getAttribute("y"));
+    if (Math.abs(y0v - y1v) < 14) labels[1].setAttribute("y", y0v + (y1v >= y0v ? 14 : -14));
+  }
+
+  attachHover(wrap, svg, W, H, M, (fx) => {
+    const year = Math.round(x0 + ((fx - M.left) / (W - M.left - M.right)) * (x1 - x0));
+    const row = years.find((a) => a.year === year);
+    if (!row) return null;
+    const px = X(row.year);
+    return {
+      px,
+      py: Y(row.warm_day_fraction),
+      html:
+        `<div class="tip-date">${row.year}${row.year >= 1991 && row.year <= 2020 ? " · in baseline (judged vs other 29 years)" : ""}</div>` +
+        `<div><span style="color:#e8a08d">●</span> warm days ${(row.warm_day_fraction * 100).toFixed(1)}%</div>` +
+        `<div><span style="color:#9db9dd">●</span> cold nights ${((row.cold_night_fraction || 0) * 100).toFixed(1)}%</div>` +
+        `<div class="tip-muted">mean tmax anomaly ${row.mean_tmax_anom > 0 ? "+" : ""}${row.mean_tmax_anom}°C</div>`,
+    };
+  });
 
   setHtml(
-    "monthlyChart",
-    `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Monthly precipitation and temperature anomaly chart">
-      <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#fbfcfa" />
-      <line x1="${pad.left}" x2="${width - pad.right}" y1="${pad.top + innerH / 2}" y2="${pad.top + innerH / 2}" stroke="#222521" stroke-opacity="0.12" />
-      ${bars}
-      <path d="${line}" fill="none" stroke="#222521" stroke-width="3" stroke-linecap="round" opacity="0.72" />
-      <text x="${pad.left}" y="${height - 12}" fill="#687067" font-size="11">${records[0].month}</text>
-      <text x="${width - pad.right}" y="${height - 12}" text-anchor="end" fill="#687067" font-size="11">${records[records.length - 1].month}</text>
-      <text x="${pad.left}" y="${pad.top + 10}" fill="#687067" font-size="11">${maxPrecip.toFixed(0)} mm</text>
-      <text x="${width - 170}" y="28" fill="#687067" font-size="12">bars: precipitation</text>
-      <text x="${width - 170}" y="48" fill="#687067" font-size="12">line: temp anomaly</text>
-    </svg>
-  `,
+    "trend-legend",
+    `<span class="key"><span class="swatch" style="background:${COLORS.heat}"></span>Warm days, 9-yr mean (annual faint)</span>
+     <span class="key"><span class="swatch" style="background:${COLORS.cold}"></span>Cold nights, 9-yr mean (annual faint)</span>
+     <span class="key"><span class="swatch" style="background:${COLORS.ochre}"></span>Expected under baseline climate</span>`
   );
 }
 
-function renderEvents(location) {
-  const rows = (location.top_events || [])
-    .map((event) => {
-      const meta = signalMeta(event.signal);
-      return `
-        <tr>
-          <td>${prettyDate(event.date)}</td>
-          <td><span class="signal-badge" style="background:${meta.color}">${meta.label}</span></td>
-          <td><strong>${Math.round(event.anomaly_score * 100)}</strong></td>
-          <td>${fmt(event.tmin_c)}-${fmt(event.tmax_c)}C</td>
-          <td>${fmt(event.precip_mm)} mm</td>
-          <td>${fmt(event.snowfall_cm)} cm</td>
-        </tr>
-      `;
-    })
-    .join("");
-  setHtml("eventRows", rows);
+/* ---------- ribbon chart ---------- */
+
+function doyOf(iso) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const start = Date.UTC(d.getUTCFullYear(), 0, 0);
+  return Math.round((d.getTime() - start) / 86400000);
 }
 
-function renderAnnualChart(location) {
-  const records = location.annual || [];
-  if (!records.length) {
-    setHtml("annualChart", `<div class="empty-state">No annual records</div>`);
+function renderRibbonChart(city) {
+  const wrap = byId("ribbon-chart");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const days = city.last_365.filter((d) => d.tx != null);
+  if (days.length < 30) {
+    wrap.innerHTML = `<div class="status-note">Not enough recent data.</div>`;
     return;
   }
-  const { width, height, pad } = svgFrame();
-  const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
-  const maxDays = Math.max(5, ...records.map((d) => d.anomaly_days || 0));
-  const step = innerW / records.length;
+  const ribbon = city.ribbon;
 
-  const bars = records
-    .map((record, index) => {
-      const x = pad.left + index * step + step * 0.18;
-      const barW = Math.max(10, step * 0.64);
-      const h = ((record.anomaly_days || 0) / maxDays) * innerH;
-      const y = pad.top + innerH - h;
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(1, h).toFixed(1)}" rx="4" fill="#2f7d5b" opacity="0.78" />`;
-    })
-    .join("");
+  const W = 880, H = 280;
+  const M = { top: 14, right: 16, bottom: 30, left: 46 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+  svg.setAttribute("aria-label", "Last 365 days of maximum temperature against the seasonal envelope");
+  wrap.appendChild(svg);
 
-  const snowMarks = records
-    .map((record, index) => {
-      if (!record.flagged_unseasonable_snow_days) return "";
-      const x = pad.left + index * step + step / 2;
-      const y = pad.top + innerH - ((record.anomaly_days || 0) / maxDays) * innerH - 10;
-      return `<circle cx="${x.toFixed(1)}" cy="${Math.max(pad.top + 8, y).toFixed(1)}" r="5" fill="#356b9a" />`;
-    })
-    .join("");
+  const enriched = days.map((d, i) => {
+    const doy = Math.min(366, doyOf(d.d));
+    return {
+      ...d, i,
+      p05: ribbon.tmax_p05[doy - 1],
+      p50: ribbon.tmax_p50[doy - 1],
+      p95: ribbon.tmax_p95[doy - 1],
+    };
+  });
+
+  const values = enriched.flatMap((d) => [d.tx, d.p05, d.p95]).filter((v) => v != null);
+  const yMin = Math.floor(Math.min(...values)) - 2;
+  const yMax = Math.ceil(Math.max(...values)) + 2;
+  const X = (i) => M.left + (i / (enriched.length - 1)) * (W - M.left - M.right);
+  const Y = (v) => H - M.bottom - ((v - yMin) / (yMax - yMin)) * (H - M.top - M.bottom);
+
+  // y grid
+  const step = yMax - yMin > 30 ? 10 : 5;
+  for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) {
+    el("line", { x1: M.left, x2: W - M.right, y1: Y(v), y2: Y(v), class: "grid-line" }, svg);
+    el("text", { x: M.left - 8, y: Y(v) + 4, "text-anchor": "end", class: "axis-label" }, svg)
+      .textContent = `${v}°`;
+  }
+  // month ticks
+  let lastMonth = null;
+  enriched.forEach((d, i) => {
+    const month = d.d.slice(0, 7);
+    if (month !== lastMonth) {
+      lastMonth = month;
+      if (i > 3 && i < enriched.length - 6) {
+        el("text", { x: X(i), y: H - 8, class: "axis-label" }, svg).textContent = new Date(
+          `${d.d}T00:00:00`
+        ).toLocaleDateString("en-IN", { month: "short" });
+      }
+    }
+  });
+
+  // envelope band p05–p95
+  const upper = enriched.map((d) => (d.p95 != null ? [X(d.i), Y(d.p95)] : null));
+  const lower = enriched
+    .map((d) => (d.p05 != null ? [X(d.i), Y(d.p05)] : null))
+    .reverse();
+  const bandPath = `${linePath(upper)}L${lower
+    .filter(Boolean)
+    .map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`)
+    .join("L")}Z`;
+  el("path", { d: bandPath, fill: COLORS.band, opacity: 0.85 }, svg);
+
+  // median
+  el("path", {
+    d: linePath(enriched.map((d) => (d.p50 != null ? [X(d.i), Y(d.p50)] : null))),
+    fill: "none", stroke: COLORS.mist, "stroke-width": 1.4, "stroke-dasharray": "1,3",
+  }, svg);
+
+  // observed trace
+  el("path", {
+    d: linePath(enriched.map((d) => [X(d.i), Y(d.tx)])),
+    fill: "none", stroke: COLORS.charcoal, "stroke-width": 1.8,
+    "stroke-linejoin": "round",
+  }, svg);
+
+  // flagged dots (temperature + snow flags carry to this chart)
+  for (const d of enriched) {
+    if (!d.f) continue;
+    const flag = bestFlag(d.f);
+    const meta = FLAG_META[flag];
+    if (!meta) continue;
+    const major = ["hot_extreme", "cold_extreme", "rare_snow", "exceptional_snow"].includes(flag);
+    el("circle", {
+      cx: X(d.i), cy: Y(d.tx), r: major ? 4 : 2.6,
+      fill: meta.color, stroke: "#fff", "stroke-width": 1.2,
+      opacity: major ? 1 : 0.75,
+    }, svg);
+  }
+
+  attachHover(wrap, svg, W, H, M, (fx) => {
+    const i = Math.round(((fx - M.left) / (W - M.left - M.right)) * (enriched.length - 1));
+    const d = enriched[Math.max(0, Math.min(enriched.length - 1, i))];
+    if (!d) return null;
+    const flagsHtml = d.f
+      ? `<div>${d.f.map((f) => FLAG_META[f]?.label || f).join(" · ")}</div>`
+      : "";
+    return {
+      px: X(d.i),
+      py: Y(d.tx),
+      html:
+        `<div class="tip-date">${fmtDate(d.d)}</div>` +
+        `<div>max ${d.tx}°C <span class="tip-muted">(normal ${d.p05}–${d.p95}°C)</span></div>` +
+        `<div class="tip-muted">min ${d.tn}°C · ${d.pr ?? 0} mm${d.sn ? ` · snow ${d.sn} cm` : ""}</div>` +
+        flagsHtml,
+    };
+  });
 
   setHtml(
-    "annualChart",
-    `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Annual anomaly count chart">
-      <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#fbfcfa" />
-      ${bars}
-      ${snowMarks}
-      <text x="${pad.left}" y="${height - 12}" fill="#687067" font-size="11">${records[0].year}</text>
-      <text x="${width - pad.right}" y="${height - 12}" text-anchor="end" fill="#687067" font-size="11">${records[records.length - 1].year}</text>
-      <text x="${pad.left}" y="${pad.top + 10}" fill="#687067" font-size="11">${maxDays} days</text>
-      <circle cx="${width - 145}" cy="25" r="5" fill="#356b9a" />
-      <text x="${width - 132}" y="29" fill="#687067" font-size="12">rare snow flag</text>
-    </svg>
-  `,
+    "ribbon-legend",
+    `<span class="key"><span class="swatch" style="background:${COLORS.band};height:10px"></span>Seasonal p05–p95 (1991–2020)</span>
+     <span class="key"><span class="swatch" style="background:${COLORS.charcoal}"></span>Daily max temperature</span>
+     <span class="key"><span class="swatch dot" style="background:${COLORS.heat}"></span>Heat flag</span>
+     <span class="key"><span class="swatch dot" style="background:${COLORS.cold}"></span>Cold flag</span>
+     <span class="key"><span class="swatch dot" style="background:${COLORS.snow}"></span>Snow flag</span>`
   );
 }
 
-loadData();
+/* ---------- precipitation chart ---------- */
+
+function renderPrecipChart(city) {
+  const wrap = byId("precip-chart");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const days = city.last_365;
+  const ribbon = city.ribbon;
+  if (!days.length) {
+    wrap.innerHTML = `<div class="status-note">No recent data.</div>`;
+    return;
+  }
+
+  const W = 880, H = 200;
+  const M = { top: 12, right: 16, bottom: 28, left: 46 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+  svg.setAttribute("aria-label", "Daily precipitation over the last 365 days");
+  wrap.appendChild(svg);
+
+  const enriched = days.map((d, i) => {
+    const doy = Math.min(366, doyOf(d.d));
+    return { ...d, i, wet95: ribbon.wet_p95[doy - 1] };
+  });
+  const maxV = Math.max(10, ...enriched.map((d) => Math.max(d.pr || 0, d.wet95 || 0))) * 1.06;
+  const X = (i) => M.left + (i / (enriched.length - 1)) * (W - M.left - M.right);
+  const Y = (v) => H - M.bottom - (v / maxV) * (H - M.top - M.bottom);
+  const barW = Math.max(1, (W - M.left - M.right) / enriched.length - 0.6);
+
+  for (let v = 0; v <= maxV; v += maxV > 120 ? 50 : 25) {
+    el("line", { x1: M.left, x2: W - M.right, y1: Y(v), y2: Y(v), class: "grid-line" }, svg);
+    el("text", { x: M.left - 8, y: Y(v) + 4, "text-anchor": "end", class: "axis-label" }, svg)
+      .textContent = `${Math.round(v)}`;
+  }
+  el("text", { x: M.left - 8, y: M.top + 2, "text-anchor": "end", class: "axis-label" }, svg)
+    .textContent = "mm";
+
+  let lastMonth = null;
+  enriched.forEach((d, i) => {
+    const month = d.d.slice(0, 7);
+    if (month !== lastMonth) {
+      lastMonth = month;
+      if (i > 3 && i < enriched.length - 6) {
+        el("text", { x: X(i), y: H - 8, class: "axis-label" }, svg).textContent = new Date(
+          `${d.d}T00:00:00`
+        ).toLocaleDateString("en-IN", { month: "short" });
+      }
+    }
+  });
+
+  // wet-day p95 reference (broken where undefined)
+  el("path", {
+    d: linePath(enriched.map((d) => (d.wet95 != null ? [X(d.i), Y(d.wet95)] : null))),
+    fill: "none", stroke: COLORS.ochre, "stroke-width": 1.4, "stroke-dasharray": "5,4",
+    opacity: 0.9,
+  }, svg);
+
+  for (const d of enriched) {
+    const v = d.pr || 0;
+    if (v <= 0) continue;
+    const flagged = d.f && d.f.includes("heavy_precip");
+    el("rect", {
+      x: X(d.i) - barW / 2, y: Y(v), width: barW, height: H - M.bottom - Y(v),
+      rx: barW > 2 ? 1 : 0,
+      fill: COLORS.precip, opacity: flagged ? 1 : 0.45,
+    }, svg);
+    if (d.sn && d.sn >= 1 && d.f && (d.f.includes("rare_snow") || d.f.includes("exceptional_snow"))) {
+      el("circle", { cx: X(d.i), cy: Y(v) - 6, r: 3.4, fill: COLORS.snow, stroke: "#fff", "stroke-width": 1 }, svg);
+    }
+  }
+
+  attachHover(wrap, svg, W, H, M, (fx) => {
+    const i = Math.round(((fx - M.left) / (W - M.left - M.right)) * (enriched.length - 1));
+    const d = enriched[Math.max(0, Math.min(enriched.length - 1, i))];
+    if (!d) return null;
+    return {
+      px: X(d.i),
+      py: d.pr ? Y(d.pr) : null,
+      html:
+        `<div class="tip-date">${fmtDate(d.d)}</div>` +
+        `<div>${d.pr ?? 0} mm${d.sn ? ` · snow ${d.sn} cm` : ""}</div>` +
+        `<div class="tip-muted">seasonal wet-day p95: ${d.wet95 != null ? `${d.wet95} mm` : "undefined (too few baseline wet days)"}</div>` +
+        (d.f && d.f.includes("heavy_precip") ? `<div>Heavy precipitation flag</div>` : ""),
+    };
+  });
+
+  setHtml(
+    "precip-legend",
+    `<span class="key"><span class="swatch" style="background:${COLORS.precip}"></span>Daily precipitation</span>
+     <span class="key"><span class="swatch" style="background:${COLORS.ochre}"></span>Seasonal wet-day 95th percentile</span>
+     <span class="key"><span class="swatch dot" style="background:${COLORS.snow}"></span>Flagged snow day</span>`
+  );
+}
+
+/* ---------- events table + drilldown ---------- */
+
+function evidenceStatement(event) {
+  const d = event.detail || {};
+  const only = (k, n, what) =>
+    k === 0 ? `No ${what} (of ${n}) reached this value` : `Only ${k} of ${n} ${what} reached this value`;
+  if (d.tmax) return only(d.tmax.n_at_or_above, d.tmax.n_baseline, "comparable baseline days");
+  if (d.tmin)
+    return d.tmin.n_at_or_below === 0
+      ? `No comparable baseline day (of ${d.tmin.n_baseline}) was this cold`
+      : `Only ${d.tmin.n_at_or_below} of ${d.tmin.n_baseline} comparable baseline days were this cold`;
+  if (d.precip) return only(d.precip.n_at_or_above, d.precip.n_baseline, "comparable baseline wet days");
+  if (d.snow_occurrence)
+    return `Only ${d.snow_occurrence.baseline_snow_days} of ${d.snow_occurrence.baseline_days} comparable baseline days had snow at all`;
+  if (d.snow_amount) return only(d.snow_amount.n_at_or_above, d.snow_amount.n_baseline, "baseline snow days");
+  return "";
+}
+
+function renderEvents(city) {
+  const body = byId("events-body");
+  if (!body) return;
+  const events = [...city.events].sort((a, b) => b.date.localeCompare(a.date));
+  if (!events.length) {
+    body.innerHTML = `<tr><td colspan="5"><div class="status-note">No flagged events in the last three years.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = events
+    .map((event, idx) => {
+      const meta = FLAG_META[event.category] || { label: event.category, cls: "" };
+      const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.unverified;
+      return `<tr data-idx="${idx}">
+        <td>${fmtDate(event.date)}</td>
+        <td><span class="badge ${meta.cls}">${meta.label}</span></td>
+        <td><b>${event.value != null ? event.value : "–"}</b> ${esc(event.unit)}</td>
+        <td class="hide-sm evidence">${esc(evidenceStatement(event))}</td>
+        <td><span class="badge ${validation.cls}">${validation.label}</span></td>
+      </tr>`;
+    })
+    .join("");
+  body.querySelectorAll("tr[data-idx]").forEach((row) =>
+    row.addEventListener("click", () => openModal(events[Number(row.dataset.idx)], city))
+  );
+}
+
+function openModal(event, city) {
+  const backdrop = byId("modal-backdrop");
+  const modal = byId("modal");
+  if (!backdrop || !modal) return;
+  const meta = FLAG_META[event.category] || { label: event.category, cls: "" };
+  const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.unverified;
+  const cityName = city.meta.name;
+
+  const facts = [];
+  if (event.tmax_pct != null && event.category === "hot_extreme")
+    facts.push(["Seasonal percentile (tmax)", pctLabel(event.tmax_pct)]);
+  if (event.tmin_pct != null && event.category === "cold_extreme")
+    facts.push(["Seasonal percentile (tmin)", pctLabel(event.tmin_pct)]);
+  if (event.precip_wet_pct != null)
+    facts.push(["Wet-day percentile", pctLabel(event.precip_wet_pct)]);
+  if (event.snow_occ_prob != null)
+    facts.push(["Baseline snow probability", `${(event.snow_occ_prob * 100).toFixed(1)}%`]);
+  if (event.snow_amount_pct != null)
+    facts.push(["Snow-amount percentile", pctLabel(event.snow_amount_pct)]);
+  facts.push(["Comparison window", `±2 days of season · 1991–2020`]);
+  facts.push(["Source tier", "Reanalysis estimate (ERA5)"]);
+
+  const newsQuery = encodeURIComponent(`"${cityName}" weather ${event.date}`);
+  const worldview = `https://worldview.earthdata.nasa.gov/?v=${city.meta.longitude - 1.6},${city.meta.latitude - 1.2},${city.meta.longitude + 1.6},${city.meta.latitude + 1.2}&t=${event.date}&l=MODIS_Terra_CorrectedReflectance_TrueColor,MODIS_Terra_NDSI_Snow_Cover`;
+
+  const suggested = `ERA5 estimates ${meta.label.toLowerCase()} near ${cityName} on ${fmtDate(event.date)} (${event.value} ${event.unit}); ${evidenceStatement(event).toLowerCase()} (same-season 1991–2020 baseline). Reanalysis estimate — verify against station or satellite evidence.`;
+
+  modal.innerHTML = `
+    <button class="close-btn" id="modal-close">Close ✕</button>
+    <span class="badge ${meta.cls}">${meta.label}</span>
+    <h3>${esc(cityName)}, ${fmtDate(event.date)}</h3>
+    <div class="when">${event.value != null ? `${event.value} ${esc(event.unit)}` : ""} · validation: <span class="badge ${validation.cls}">${validation.label}</span></div>
+    <div class="statement"><b>${esc(evidenceStatement(event))}</b> — same 5-day seasonal window across 1991–2020${event.date >= "1991" && event.date <= "2021" ? ", excluding the event's own year" : ""}.</div>
+    ${event.validation?.note ? `<div class="statement">${esc(event.validation.note)}${event.validation.evidence_url ? ` · <a href="${esc(event.validation.evidence_url)}" target="_blank" rel="noopener">evidence</a>` : ""}</div>` : ""}
+    <div class="grid2">
+      ${facts.map(([label, value]) => `<div class="fact"><div class="label">${esc(label)}</div><div class="val">${esc(value)}</div></div>`).join("")}
+    </div>
+    <div class="caveat">This is a screening flag from reanalysis, not an observation. It says nothing about cause, and it describes one ~9–31 km grid cell, not a district. Before citing publicly, check at least one independent evidence tier below.</div>
+    <p><b>Verify against:</b></p>
+    <ul class="links">
+      <li><a href="https://news.google.com/search?q=${newsQuery}" target="_blank" rel="noopener">News coverage around this date</a></li>
+      <li><a href="https://mausam.imd.gov.in/" target="_blank" rel="noopener">IMD observations and bulletins</a></li>
+      ${event.category.includes("snow") ? `<li><a href="${worldview}" target="_blank" rel="noopener">MODIS snow cover on NASA Worldview (this date, this area)</a></li>` : ""}
+    </ul>
+    <p><b>Suggested careful phrasing:</b></p>
+    <div class="statement" style="font-size:13px">${esc(suggested)}</div>
+  `;
+  backdrop.classList.add("open");
+  const closeBtn = byId("modal-close");
+  if (closeBtn) closeBtn.addEventListener("click", closeModal);
+}
+
+function closeModal() {
+  const backdrop = byId("modal-backdrop");
+  if (backdrop) backdrop.classList.remove("open");
+}
+
+/* ---------- go ---------- */
+
+document.addEventListener("DOMContentLoaded", boot);

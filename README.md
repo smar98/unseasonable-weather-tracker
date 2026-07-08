@@ -1,92 +1,67 @@
-# Seasonal Anomaly Tracker
+# Unseasonable — India seasonal anomaly tracker
 
-A public-data dashboard for screening unseasonable weather in the Western Himalaya.
+**Live:** https://smar98.github.io/unseasonable-weather-tracker/
 
-The project starts with a narrow, defensible question:
+A public-data screening tool that answers one narrow question for 40 Indian
+cities: **was this day's weather unusual for this place and this time of
+year?** Every day since 1960 is compared against the same season in a fixed
+1991–2020 baseline using percentile indices from the WMO ETCCDI family
+(Zhang et al. 2011), computed on ERA5/ERA5-Land reanalysis.
 
-> How unusual was this weather condition for this location and time of year?
+Built for the practitioner who needs to check a claim like "it snowed in
+Sonamarg in July" in minutes: every flag is a plain rank statement ("only 1 of
+150 comparable baseline days had snow"), ships with its base rate, and carries
+a validation status against independent evidence.
 
-It does not claim that individual events were caused by climate change. The MVP uses ERA5 reanalysis through the Open-Meteo Historical Weather API to compute day-of-year percentiles against a 1991-2020 baseline.
+What it is **not**: an attribution model (it never says climate change caused
+an event), a station record (all values are reanalysis estimates), or a
+district-level product (each city is one grid cell).
 
-## What It Tracks
+## Method in one paragraph
 
-- Extreme heat relative to the same time of year.
-- Extreme cold relative to the same time of year.
-- Heavy precipitation relative to the same time of year.
-- Candidate unseasonable snowfall events.
-- Live/near-live current conditions from a forecast/nowcast endpoint.
+Daily tmax/tmin/precipitation/snowfall from Open-Meteo's `era5_seamless`
+(ERA5-Land ~9 km blended with ERA5 ~31 km; snowfall from ERA5). Each calendar
+day is compared to a 5-day centred seasonal window pooled across 1991–2020
+(~150 values), with leave-one-year-out for in-baseline days. Midrank
+percentiles produce flags: warm/hot days (p90/p95), cold nights (p10/p05),
+heavy precipitation (wet-day p95, wet days ≥1 mm only, per the ETCCDI
+convention), and two amount-aware snow flags (rare-season occurrence;
+exceptional seasonal amount). Null expectations (~10%/~5% by construction) are
+displayed everywhere counts are. Full detail, deviations, and references:
+[docs/methodology.md](docs/methodology.md).
 
-## Live Dashboard Behavior
+## Repository layout
 
-The dashboard has two data layers:
+```
+scripts/build_dataset.py    pipeline (backfill + daily incremental update)
+scripts/cities.json         the 40 monitored cities
+data_cache/<id>.csv.gz      raw daily reanalysis values, 1960–present
+public/data/index.json      city index + latest flags (map/list payload)
+public/data/cities/<id>.json per-city dataset (charts, events, KPIs)
+docs/methodology.md         full methodology with citations
+docs/source-register.md     evidence sources and tiers
+docs/validation-register.json manual event-validation log (incl. misses)
+index.html / app.js / styles.css  static dashboard, hand-built SVG charts
+```
 
-1. **Historical anomaly layer**: generated into `public/data/anomaly_summary.json` from ERA5 via Open-Meteo. This refreshes through GitHub Actions and is intentionally slower because ERA5 has latency.
-2. **Live current-conditions layer**: fetched in the browser from the Open-Meteo forecast API roughly every 10 minutes. This is a nowcast/forecast estimate, not an official station observation.
-
-The live layer is used for situational awareness only. It does not change the historical anomaly score.
-
-## Current Scope
-
-Initial locations:
-
-- Gulmarg
-- Sonamarg
-- Srinagar
-- Leh
-- Manali
-- Shimla
-- Joshimath
-
-The first scope is intentionally point-based. District or regional claims require elevation-band analysis and source validation.
-
-## Run Locally
-
-Generate the dataset:
+## Run locally
 
 ```bash
-python3 scripts/build_dataset.py
+python3 scripts/build_dataset.py --mode update   # refresh recent days
+python3 -m http.server 8000                      # then open localhost:8000
 ```
 
-Serve the static dashboard:
+Full rebuild from scratch: `--mode backfill` (fetches 1960–present for all 40
+cities; respects Open-Meteo rate limits, so expect a long run).
 
-```bash
-python3 -m http.server 8000
-```
+## Data refresh
 
-Then open:
+`.github/workflows/update-data.yml` runs daily at 03:20 UTC: incremental fetch
+of trailing days per city, reclassification, commit. Deployment is GitHub
+Pages via `.github/workflows/pages.yml` on push to `main`.
 
-```text
-http://localhost:8000
-```
+## License and attribution
 
-## Methodology
-
-Read [docs/methodology.md](docs/methodology.md) before interpreting any result.
-
-Key choices:
-
-- Baseline: 1991-2020.
-- Seasonal comparison: same day-of-year plus/minus 7 days.
-- Source label: reanalysis estimate.
-- Live label: forecast/nowcast estimate.
-- Climate attribution: out of scope.
-
-## Source Register
-
-The current and planned sources are documented in [docs/source-register.md](docs/source-register.md).
-
-## Limitations
-
-- ERA5 is not station data.
-- Mountain terrain has sharp elevation and aspect gradients.
-- Snowfall and snow cover are different phenomena.
-- The anomaly score is for screening and sorting only.
-- Public event claims should be validated against station, satellite, or official evidence.
-
-## Roadmap
-
-1. Add MODIS/IMS snow-cover ingestion.
-2. Aggregate snow-cover anomalies by elevation band.
-3. Add IMD station validation where licensing/access permits.
-4. Add uncertainty flags by source and terrain complexity.
-5. Add district polygons after point metrics are validated.
+Code: MIT. Weather data: ERA5/ERA5-Land (Copernicus/ECMWF) via Open-Meteo
+(CC-BY 4.0, non-commercial API tier). Basemap © OpenStreetMap contributors,
+© CARTO. Cite reanalysis values as estimates, never as station observations.

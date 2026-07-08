@@ -8,9 +8,16 @@ This file records the intended source hierarchy and how each source should be us
 
 - URL: https://open-meteo.com/en/docs/historical-weather-api
 - Role: API access layer for ERA5/ERA5-Land/IFS data.
-- Current use: ERA5 daily temperature, precipitation, and snowfall.
+- Current use: model `era5_seamless` — ERA5-Land (~9 km) blended with ERA5
+  (~31 km) — for daily tmax/tmin/precipitation; snowfall falls back to ERA5
+  because ERA5-Land exposes no snowfall variable through this API (verified
+  empirically, July 2026: `snowfall_sum` is null from `era5_land` in both
+  winter and summer test windows).
 - Strength: Easy reproducibility; no key required for non-commercial prototyping.
-- Limitation: API wrapper, not the original data archive; model output should be cited as reanalysis estimates.
+- Limitation: API wrapper, not the original data archive; temperature is
+  statistically downscaled to a ~90 m elevation model but precipitation and
+  snowfall are not; rate-limited (call-weighted), which the pipeline's backoff
+  respects. Model output should be cited as reanalysis estimates.
 
 ### Open-Meteo Forecast API
 
@@ -23,10 +30,25 @@ This file records the intended source hierarchy and how each source should be us
 ### ERA5
 
 - URL: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels
+- Reference: Hersbach et al. (2020), QJRMS.
 - Role: Long-run global reanalysis.
-- Current use: Underlying source for daily anomaly screening.
+- Current use: Underlying source for daily anomaly screening; sole source for
+  snowfall.
 - Strength: Hourly data from 1940 to present at global scale.
-- Limitation: 0.25 degree resolution can be coarse for Himalayan valleys and ridges.
+- Limitation: 0.25 degree resolution can be coarse for Himalayan valleys and
+  ridges; snowfall is a model-partitioned variable and carries extra
+  uncertainty in complex terrain.
+
+### ERA5-Land
+
+- URL: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land
+- Reference: Muñoz-Sabater et al. (2021), ESSD.
+- Role: Higher-resolution (~9 km) land-surface reanalysis, blended into
+  `era5_seamless`.
+- Current use: Improves temperature/precipitation resolution, especially in
+  mountain terrain.
+- Limitation: No snowfall variable via the Open-Meteo API; still far coarser
+  than valley-scale variation.
 
 ## Planned Validation Sources
 

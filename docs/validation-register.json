@@ -1,0 +1,5 @@
+{
+  "description": "Manual validation register. Each entry links a flagged event (event_id = <city_id>:<date>:<category>) to independent evidence. Status vocabulary: validated (independent observation confirms the condition), corroborated (indirect/partial support, e.g. news reports), unverified (not yet checked), contradicted (independent evidence disagrees with the reanalysis flag). Misses are recorded, not deleted — the register doubles as the tool's published error log.",
+  "updated": "2026-07-08",
+  "events": []
+}

@@ -3,232 +3,238 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Seasonal Anomaly Tracker</title>
+    <title>Unseasonable — India seasonal anomaly tracker</title>
+    <meta
+      name="description"
+      content="Screening tool for unseasonable weather across 40 Indian cities: ERA5 reanalysis compared against a 1991-2020 seasonal baseline using ETCCDI-style percentile indices."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260708-2" />
+    <link rel="stylesheet" href="styles.css?v=20260708-3" />
   </head>
   <body>
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Western Himalaya public-data monitor</p>
-        <h1>Seasonal Anomaly Tracker</h1>
-      </div>
-      <div class="source-strip">
-        <span class="source-pill live-pill" id="livePill">Live layer loading</span>
-        <span class="source-pill">ERA5 reanalysis</span>
-        <span class="source-pill">1991-2020 baseline</span>
-        <span class="source-pill" id="generatedAt">Loading data</span>
-      </div>
+      <div class="wordmark">un<span>seasonable</span></div>
+      <div class="tagline">India seasonal anomaly tracker</div>
+      <div class="spacer"></div>
+      <div class="meta" id="generated-note">Loading dataset…</div>
+      <a
+        class="gh"
+        href="https://github.com/smar98/unseasonable-weather-tracker"
+        target="_blank"
+        rel="noopener"
+        >GitHub</a
+      >
     </header>
+
+    <section class="hero">
+      <p class="eyebrow">Public-data screening tool · 40 cities · 1960–present</p>
+      <h1>Is this weather unusual for this place and time of year?</h1>
+      <p class="dek">
+        Every day at 40 Indian cities is compared against the same season in a fixed
+        1991–2020 baseline, using percentile indices from the WMO ETCCDI family
+        computed on ERA5 reanalysis. Flags are screening signals with stated base
+        rates — candidate events to verify against stations, satellites, and
+        official bulletins, not proof.
+      </p>
+      <div class="guardrails">
+        <span class="chip">Seasonal anomaly screening — not climate attribution</span>
+        <span class="chip">Reanalysis estimates — not station observations</span>
+        <span class="chip">Grid-cell values — not whole districts</span>
+        <span class="chip warn">Every flag needs validation before public claims</span>
+      </div>
+    </section>
 
     <main class="layout">
       <aside class="sidebar">
-        <div class="panel-heading">
-          <span>Locations</span>
-          <small id="locationCount">0</small>
+        <div class="card map-card">
+          <div id="map"></div>
+          <p class="map-note" id="map-note">
+            Dot colour = most recent flagged signal in the last 365 days.
+          </p>
         </div>
-        <div class="location-list" id="locationList"></div>
 
-        <div class="method-panel">
-          <div class="panel-heading">
-            <span>Evidence Ladder</span>
+        <div class="card">
+          <div class="card-head"><h2>Across India right now</h2></div>
+          <div class="card-body national" id="national-summary"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Cities</h2></div>
+          <div class="card-body">
+            <input
+              type="search"
+              id="city-search"
+              class="city-search"
+              placeholder="Search 40 cities…"
+              autocomplete="off"
+            />
+            <nav class="city-list" id="city-list" aria-label="City list"></nav>
           </div>
-          <ol>
-            <li>Station observation</li>
-            <li>Satellite detection</li>
-            <li>Reanalysis estimate</li>
-            <li>Forecast or nowcast</li>
-            <li>Media report</li>
-          </ol>
         </div>
       </aside>
 
-      <section class="workspace">
-        <section class="location-hero">
-          <div>
-            <p class="eyebrow" id="selectedRegion">Region</p>
-            <h2 id="selectedName">Loading</h2>
-            <p class="terrain-note" id="terrainNote"></p>
-          </div>
-          <div class="confidence-box">
-            <span class="confidence-label">Current evidence</span>
-            <strong>Reanalysis estimate</strong>
-          </div>
-        </section>
-
-        <section class="map-workbench">
-          <div class="tool-panel">
-            <div class="panel-heading">
-              <span>Map</span>
-              <small>Click any monitoring point</small>
+      <section class="detail" id="detail">
+        <div class="card">
+          <div class="status-note" id="detail-status">Loading city data…</div>
+          <div id="city-header" hidden>
+            <div class="city-head">
+              <h2 id="city-name"></h2>
+              <span class="where" id="city-where"></span>
             </div>
-            <div class="region-map" id="regionMap" aria-label="Regional anomaly map"></div>
+            <p class="elev-note" id="city-elev"></p>
+            <div class="live-strip" id="live-strip"></div>
           </div>
+        </div>
 
-          <div class="tool-panel">
-            <div class="panel-heading">
-              <span>Location Readout</span>
-              <small id="readoutPeriod">Last 365 days</small>
-            </div>
-            <div class="readout-summary">
-              <span>What is happening?</span>
-              <strong id="plainSummary">Loading anomaly summary.</strong>
-              <p id="plainSummaryDetail">The dashboard compares recent weather with the same time of year in 1991-2020.</p>
-            </div>
-            <div class="live-panel" id="livePanel">
-              <span class="live-dot"></span>
-              <div>
-                <strong>Live layer loading</strong>
-                <p>Current estimates will appear here when the nowcast endpoint responds.</p>
-              </div>
-            </div>
-            <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="kpis" id="kpi-cards"></div>
+
+        <div class="card chart-card" id="trend-card">
+          <div class="card-head">
+            <h2>Days outside the seasonal normal, 1960–present</h2>
+            <span class="what"
+              >Share of days each year beyond the 1991–2020 seasonal 90th/10th
+              percentiles. Under a stable climate both lines sit near the 10%
+              reference.</span
+            >
           </div>
-        </section>
+          <div class="chart-wrap" id="trend-chart"></div>
+          <div class="legend" id="trend-legend"></div>
+        </div>
 
-        <section class="briefing-grid">
-          <div class="brief-card primary">
-            <span>How to make sense of it</span>
-            <strong>Start with the map, then open the ranked events.</strong>
-            <p>The marker number is recent anomaly days. The readout explains which signal is driving the count.</p>
+        <div class="card chart-card" id="ribbon-card">
+          <div class="card-head">
+            <h2>The last 365 days against the seasonal envelope</h2>
+            <span class="what"
+              >Band = 1991–2020 seasonal 5th–95th percentile of daily maximum
+              temperature; line = this year. Dots mark flagged days.</span
+            >
           </div>
-          <div class="brief-card">
-            <span>How to read the colors</span>
-            <strong>Color means recent anomaly-day frequency.</strong>
-            <p>Larger numbers mean more recent days outside the seasonal range, not greater harm.</p>
+          <div class="chart-wrap" id="ribbon-chart"></div>
+          <div class="legend" id="ribbon-legend"></div>
+        </div>
+
+        <div class="card chart-card" id="precip-card">
+          <div class="card-head">
+            <h2>Daily precipitation, last 365 days</h2>
+            <span class="what"
+              >Bars = daily totals; ochre marks = the seasonal wet-day 95th
+              percentile where defined. Solid bars are flagged heavy-precipitation
+              days.</span
+            >
           </div>
-          <div class="brief-card">
-            <span>Live layer</span>
-            <strong id="liveSummary">Fetching current conditions.</strong>
-            <p id="liveSummaryDetail">Live values are forecast/nowcast estimates and are separate from historical anomaly scores.</p>
+          <div class="chart-wrap" id="precip-chart"></div>
+          <div class="legend" id="precip-legend"></div>
+        </div>
+
+        <div class="card chart-card" id="events-card">
+          <div class="card-head">
+            <h2>Candidate events, last 3 years</h2>
+            <span class="what"
+              >Screening flags ranked by rarity. Click a row for the evidence
+              statement and validation status.</span
+            >
           </div>
-        </section>
-
-        <section class="section-break">
-          <div>
-            <p class="eyebrow">Details after the map</p>
-            <h3>Why was this point flagged?</h3>
+          <div class="card-body" style="overflow-x: auto">
+            <table class="events-table" id="events-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Signal</th>
+                  <th>Value</th>
+                  <th class="hide-sm">Evidence</th>
+                  <th>Validation</th>
+                </tr>
+              </thead>
+              <tbody id="events-body"></tbody>
+            </table>
           </div>
-          <p>
-            These views explain the screening result. Use them after selecting a point on the map;
-            they are not required to understand the first-pass signal.
-          </p>
-        </section>
-
-        <section class="grid-two chart-grid">
-          <div class="tool-panel">
-            <div class="panel-heading">
-              <span>Daily Temperature Anomaly</span>
-              <small>Last 45 available days</small>
-            </div>
-            <div id="dailyChart" class="chart-box"></div>
-          </div>
-
-          <div class="tool-panel">
-            <div class="panel-heading">
-              <span>Monthly Pattern</span>
-              <small>Last 36 months</small>
-            </div>
-            <div id="monthlyChart" class="chart-box"></div>
-          </div>
-        </section>
-
-        <section class="grid-two">
-          <div class="tool-panel">
-            <div class="panel-heading">
-              <span>Candidate Events</span>
-              <small>Ranked by screening score</small>
-            </div>
-            <div class="event-table-wrap">
-              <table class="event-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Signal</th>
-                    <th>Score</th>
-                    <th>Temp</th>
-                    <th>Rain</th>
-                    <th>Snow</th>
-                  </tr>
-                </thead>
-                <tbody id="eventRows"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="tool-panel">
-            <div class="panel-heading">
-              <span>Annual Counts</span>
-              <small>Recent period</small>
-            </div>
-            <div id="annualChart" class="chart-box compact"></div>
-          </div>
-        </section>
-
-        <section class="ancillary-grid">
-          <article class="tool-panel">
-            <div class="panel-heading">
-              <span>Methodology</span>
-              <small>Screening rules</small>
-            </div>
-            <ul class="clean-list">
-              <li>Each day is compared with the same day-of-year +/- 7 days in 1991-2020.</li>
-              <li>Heat, cold, precipitation, and snowfall are scored separately before any ranking.</li>
-              <li>The score is a review queue, not climate attribution, impact, or risk.</li>
-            </ul>
-            <a class="text-link" href="docs/methodology.md">Open full methodology</a>
-          </article>
-
-          <article class="tool-panel">
-            <div class="panel-heading">
-              <span>Sources</span>
-              <small>Evidence ladder</small>
-            </div>
-            <ul class="clean-list">
-              <li>Historical anomaly layer: Open-Meteo API wrapping ERA5 reanalysis.</li>
-              <li>Live layer: Open-Meteo forecast/nowcast endpoint.</li>
-              <li>Planned validation: IMD station records plus MODIS/IMS snow cover.</li>
-            </ul>
-            <a class="text-link" href="docs/source-register.md">Open source register</a>
-          </article>
-
-          <article class="tool-panel">
-            <div class="panel-heading">
-              <span>What This Is Not</span>
-              <small>Interpretation guardrail</small>
-            </div>
-            <ul class="clean-list">
-              <li>Not proof that climate change caused a specific event.</li>
-              <li>Not an official IMD observation dashboard.</li>
-              <li>Not a district-wide claim from one mountain point.</li>
-            </ul>
-          </article>
-        </section>
-
-        <section class="methodology-band">
-          <div>
-            <p class="eyebrow">Interpretation boundary</p>
-            <h3>Weather anomaly, not attribution</h3>
-          </div>
-          <p>
-            Each day is compared with the same day-of-year window in the 1991-2020 baseline.
-            The score ranks candidates for review. Public claims should be validated against
-            official station data, satellite snow cover, or other independent evidence.
-          </p>
-        </section>
+        </div>
       </section>
     </main>
+
+    <section class="method-band">
+      <p class="eyebrow">How to read this</p>
+      <div class="method-grid">
+        <div class="card method-card teal">
+          <div class="card-head"><h3>What a flag means</h3></div>
+          <div class="card-body">
+            <ul>
+              <li>
+                Heat/cold flags: the day sat beyond the 95th/5th percentile of
+                ~150 comparable baseline days (same season, 1991–2020).
+              </li>
+              <li>Heavy precipitation uses wet days (≥1 mm) only — the WMO convention.</li>
+              <li>
+                Snow flags are amount-aware: rare-season occurrence, or an amount
+                beyond the seasonal 95th percentile of baseline snow days.
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="card method-card ochre">
+          <div class="card-head"><h3>Base rates are stated</h3></div>
+          <div class="card-body">
+            <ul>
+              <li>
+                By construction ~10% of days breach a 90th percentile under a
+                1991–2020 climate. The signal is the excess above that, not the
+                count itself.
+              </li>
+              <li>
+                Rising heat exceedance largely reflects warming since the baseline
+                — that is the finding, not a defect.
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="card method-card">
+          <div class="card-head"><h3>What this cannot say</h3></div>
+          <div class="card-body">
+            <ul>
+              <li>Whether climate change caused a specific event (attribution needs a different design).</li>
+              <li>What an official IMD station recorded — ERA5 is a reanalysis estimate.</li>
+              <li>Conditions across a whole district — each city is one grid cell.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <p class="dek" style="margin-top: 14px">
+        Full methodology, source register, and validation log:
+        <a href="docs/methodology.md">methodology</a> ·
+        <a href="docs/source-register.md">sources</a> ·
+        <a href="docs/validation-register.json">validation register</a>
+      </p>
+    </section>
+
+    <footer class="footer">
+      <b>Sources.</b> ERA5 / ERA5-Land reanalysis (Hersbach et al. 2020) via the
+      Open-Meteo historical API; live conditions via the Open-Meteo forecast API;
+      basemap © OpenStreetMap contributors, © CARTO. Indices follow the ETCCDI
+      percentile family (Zhang et al. 2011) with documented deviations. All values
+      are reanalysis estimates, not station observations. Code and data:
+      <a href="https://github.com/smar98/unseasonable-weather-tracker">GitHub</a>.
+    </footer>
+
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+    </div>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="app.js?v=20260708-2"></script>
+    <script src="app.js?v=20260708-3"></script>
   </body>
 </html>

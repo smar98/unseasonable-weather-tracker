@@ -1,195 +1,190 @@
 # Methodology
 
-This project is an anomaly tracker, not an attribution model. It is designed to answer a narrow question:
+**Version 2.0 · July 2026.** This document describes exactly what the code in
+`scripts/build_dataset.py` computes. Where the implementation deviates from a
+published convention, the deviation is stated and justified. Thresholds named
+here are the thresholds in the code; there are no display-layer adjustments.
 
-> How unusual was this observed or estimated weather condition for this location and time of year?
+## 1. Question and intended user
 
-It does not claim that a specific event was caused by climate change. Climate attribution requires a separate event-attribution design using counterfactual climate modeling, uncertainty intervals, and peer-reviewed methods.
+The tool answers one narrow question:
 
-## 1. Definitions
+> **Was this day's weather unusual for this location and this time of year,
+> relative to a fixed 1991–2020 baseline?**
 
-### Weather event
+The intended user is a journalist or analyst who needs to check a claim like
+"it snowed in Sonamarg in July" or "Delhi has never been this hot in March" in
+minutes, with the evidence chain visible. Every flag therefore carries a plain
+rank statement ("only 1 of 150 comparable baseline days had snow"), a stated
+base rate, and a validation status.
 
-A dated condition at a location, such as high temperature, heavy rainfall, snowfall, or cold precipitation.
+The tool deliberately does **not** answer:
 
-### Seasonal anomaly
+- whether climate change caused a specific event (attribution requires
+  counterfactual model ensembles; see Ch. 11, IPCC AR6 WG1),
+- what an official IMD station recorded,
+- conditions across a whole district (each city is one reanalysis grid cell),
+- impacts, damages, or risk.
 
-A weather event that is unusual relative to the historical distribution for the same part of the year.
+## 2. Data source
 
-The MVP computes this using a day-of-year comparison window:
+- **Historical daily values:** Open-Meteo archive API, model `era5_seamless` —
+  ERA5-Land (~9 km; Muñoz-Sabater et al. 2021) blended with ERA5 (~31 km;
+  Hersbach et al. 2020). Snowfall comes from ERA5 only, because ERA5-Land does
+  not expose a snowfall variable through this API (verified empirically:
+  ERA5-Land returns nulls for `snowfall_sum` in both summer and winter).
+- **Variables:** daily maximum and minimum 2 m temperature, daily precipitation
+  sum, daily snowfall sum. Daily aggregation in `Asia/Kolkata`.
+- **Live strip (display only):** Open-Meteo forecast API nowcast. It never
+  affects flags; the UI labels it as the weakest evidence tier.
+- **Record:** 1960-01-01 to (today − 5 days), the lag reflecting reanalysis
+  publication delay.
 
-```text
-Observed day D is compared with all baseline days from D - 7 to D + 7
-across the baseline period.
+Reanalysis is a physically consistent estimate, not observation. Open-Meteo
+statistically downscales temperature to a ~90 m elevation model, but
+precipitation and snowfall remain at native grid resolution. In steep Himalayan
+terrain the grid cell can differ materially from the town; the dashboard
+displays both the town elevation and the grid-cell elevation for this reason.
+
+## 3. Baseline and seasonal comparison window
+
+- **Baseline:** 1991–2020, the current WMO climate-normal period. It is fixed:
+  recent years are never allowed to redefine "normal."
+- **Seasonal window:** each calendar day is compared against all baseline days
+  within ±2 days of the same day-of-year (a 5-day centred window, the ETCCDI
+  convention), pooled across the 30 baseline years: ~150 comparable days.
+  Day-of-year distance is circular, so early January compares against late
+  December correctly. Leap-day pools are thinner but non-empty by construction.
+
+## 4. Percentiles: midrank, leave-one-year-out
+
+For an observed value `x` against a pool of `n` baseline values:
+
+```
+percentile(x) = (count(pool < x) + 0.5 · count(pool = x)) / n
 ```
 
-This keeps the comparison seasonal. A July 8 event is not compared with January weather.
+This midrank form handles ties (frequent in precipitation) without bias, and
+every percentile is exactly restatable as "only k of n baseline days reached
+this value" — the statement shown in the UI.
 
-### Unseasonable snow
+**In-baseline days** (1991–2020) are judged against the other 29 years only
+(leave-one-year-out), so a value never competes against its own year. The exact
+treatment of in-base percentile-index inhomogeneity is the bootstrap of Zhang
+et al. (2005), which climdex implements; LOO is the practical approximation and
+its residual effect is confined to in-base years, which serve only as context
+in the trend chart. Out-of-base years (the monitoring target) are unaffected.
 
-Snowfall is flagged as unseasonable when:
+We use rank-based percentiles rather than climdex's interpolated quantile
+thresholds (Hyndman–Fan type 8). At n≈150 the difference is a fraction of one
+rank position; the sensitivity annex quantifies it.
 
-```text
-snowfall_cm > 0.1
-and baseline probability of snow for the same day-of-year window <= 5%
-```
+## 5. Flag definitions (exact)
 
-For public-facing claims, this should be corroborated with satellite snow-cover products, station observations, credible local reports, or direct imagery.
+| Flag | Condition | ETCCDI relative |
+|---|---|---|
+| `warm_day` | tmax percentile > 0.90 | TX90p building block |
+| `hot_extreme` | tmax percentile > 0.95 | stricter TX90p variant |
+| `cold_night` | tmin percentile < 0.10 | TN10p building block |
+| `cold_extreme` | tmin percentile < 0.05 | stricter TN10p variant |
+| `heavy_precip` | wet day (≥1 mm) AND wet-day percentile > 0.95 AND wet-day pool ≥ 15 | seasonal analogue of R95p |
+| `rare_snow` | snowfall ≥ 1 cm AND baseline probability of a ≥1 cm snow day in the seasonal window ≤ 5% | none (novel, documented) |
+| `exceptional_snow` | snowfall ≥ 1 cm AND amount percentile among baseline seasonal snow days > 0.95 AND snow-day pool ≥ 15 | none (novel, documented) |
 
-### Extreme heat
+Notes:
 
-Daily maximum temperature is flagged when:
+- **Wet-day convention.** Precipitation percentiles are computed over wet days
+  (≥1 mm) only, following the ETCCDI convention. Computing them over all days
+  would inflate dry-climate flags: in a desert cell most days are zero, so any
+  modest rain lands in the extreme tail of the all-days distribution. (This was
+  a defect of v1 of this tool; Leh showed 85 spurious "heavy precipitation"
+  days.)
+- **Seasonal vs annual R95p.** ETCCDI's R95p uses a single annual wet-day 95th
+  percentile. In monsoon climates that threshold is set almost entirely by
+  monsoon-season rain, so unseasonable dry-season rain can never register. We
+  therefore use a *seasonal* wet-day percentile as the primary flag — a
+  documented deviation — and additionally report annual `r95p_days` per year
+  for direct comparability with published ETCCDI products.
+- **Snow flags are amount-aware and threshold-transparent.** v1 used a single
+  composite score (weighted rarity + amount) that never fired in 3.5 years of
+  data; diagnosis showed both that ERA5 grid cells in the high Himalaya treat
+  trace summer snow as climatologically common, and that binary occurrence
+  rarity ignores record amounts. v2 separates the two questions: "does it snow
+  at all in this season?" (`rare_snow`) and "is this amount exceptional for
+  this season?" (`exceptional_snow`). The ≥1 cm floor excludes ERA5 trace-snow
+  noise. Snow flags are only computed for cities with ≥30 baseline snow days.
+- **Pool minimums.** Percentile flags that would rest on fewer than 15
+  comparable baseline days are not issued; the UI reports the threshold as
+  undefined instead. A rarity claim needs a denominator that can support it.
 
-```text
-temperature_2m_max percentile >= 95th percentile
-```
+There is **no composite anomaly score**. Events are ranked by their percentile
+(or occurrence probability for `rare_snow`), and every ranking criterion is a
+quantity with a definition.
 
-The percentile is relative to the same day-of-year window in the baseline period.
+## 6. Base rates, by construction
 
-### Extreme cold
+Under a climate identical to the baseline, approximately:
 
-Daily minimum temperature is flagged when:
+- 10% of days breach a 90th-percentile flag (`warm_day`, `cold_night`),
+- 5% breach a 95th/5th-percentile flag,
+- 5% of wet days breach `heavy_precip`.
 
-```text
-temperature_2m_min percentile <= 5th percentile
-```
+These null expectations ship inside every city file and are drawn as reference
+lines in the UI. **The signal is the excess over the expected count, never the
+count itself.** Empirical check: across the 1991–2020 baseline years
+(leave-one-year-out), the realised warm-day fraction is ~0.10, confirming the
+machinery is unbiased.
 
-### Heavy precipitation
+The dominant excess in recent years is warm-side exceedance — 2021–2025
+warm-day fractions run 1.5–2× the null at most cities. That is the expected
+signature of warming since the baseline period, and the tool presents it as
+the finding of the trend view. It is not "contamination"; it is what a fixed
+baseline measures. Contrast: Climate Central's Climate Shift Index makes the
+same trend the explicit object via attribution ensembles; this tool stays at
+screening level and says only "outside the 1991–2020 seasonal normal."
 
-Daily precipitation is flagged when:
+## 7. Evidence ladder and validation register
 
-```text
-precipitation_sum percentile >= 95th percentile
-and precipitation_sum >= 1 mm
-```
+Evidence tiers, strongest first:
 
-The 1 mm floor avoids labeling trace precipitation as extreme in extremely dry climates.
+1. Official station observation (IMD)
+2. Satellite detection (MODIS/IMS snow cover; INSAT products)
+3. Reanalysis estimate (this tool's historical layer)
+4. Forecast/nowcast (this tool's live strip)
+5. Media/social reports (corroboration only)
 
-## 2. Baseline
+Every flagged event carries a validation status from
+`docs/validation-register.json`: **validated / corroborated / unverified /
+contradicted**. Register entries link evidence. Contradicted flags are kept
+visible: the register doubles as the tool's published false-positive log, and
+the hit rate of a validated sample is reported rather than implied.
 
-The default baseline is:
+## 8. Known limitations
 
-```text
-1991-01-01 through 2020-12-31
-```
+- ERA5/ERA5-Land precipitation and snowfall in complex Himalayan terrain carry
+  substantial uncertainty; snowfall doubly so (it is a model-partitioned
+  variable, not assimilated snow depth).
+- One grid cell ≠ one town ≠ one district. Elevation gaps are displayed, but
+  the mismatch is irreducible at reanalysis resolution.
+- The 5-day window trades seasonal sharpness against pool size; ±7 days is
+  examined in the sensitivity annex.
+- Percentile indices say nothing about duration or spatial extent; a
+  three-day heatwave appears as three independent daily flags.
+- IMD heatwave definitions (absolute thresholds plus departures) are the
+  operationally relevant standard in India and are not yet implemented;
+  planned as a companion flag set.
 
-This follows the common 30-year climate-normal convention. The app uses a fixed historical baseline instead of moving recent averages so that recent years are not allowed to redefine the comparison set.
+## 9. References
 
-## 3. Current Data Source
+- Zhang, X., et al. (2011). Indices for monitoring changes in extremes based on
+  daily temperature and precipitation data. *WIREs Climate Change*, 2(6).
+- Zhang, X., Hegerl, G., Zwiers, F., & Kenyon, J. (2005). Avoiding
+  inhomogeneity in percentile-based indices of temperature extremes.
+  *Journal of Climate*, 18(11).
+- Hersbach, H., et al. (2020). The ERA5 global reanalysis. *QJRMS*, 146(730).
+- Muñoz-Sabater, J., et al. (2021). ERA5-Land: a state-of-the-art global
+  reanalysis dataset for land applications. *Earth Syst. Sci. Data*, 13.
+- WMO (2017). *Guidelines on the Calculation of Climate Normals*. WMO-No. 1203.
 
-The MVP uses the Open-Meteo Historical Weather API with ERA5 reanalysis.
-
-ERA5 is a physically consistent global reanalysis. It combines model physics with assimilated observations to reconstruct historical weather. It is useful for screening anomalies over long periods, especially where station data access is hard.
-
-Important limitation:
-
-```text
-ERA5 is not a station observation.
-```
-
-In steep mountain terrain, point estimates may differ materially from actual valley, slope, ridge, or peak conditions. A dashboard claim about "Kashmir" or "a district" should not be based on a single grid-point estimate.
-
-## 4. Live Layer
-
-The dashboard also includes a live/near-live current-conditions layer from the Open-Meteo forecast API.
-
-This layer is intentionally separate from the historical anomaly score.
-
-```text
-Live layer = current forecast/nowcast estimate
-Historical layer = ERA5 day-level anomaly screen
-```
-
-The live layer can answer:
-
-- What is estimated right now at this point?
-- Is the selected point currently seeing rain, snow, wind, or unusual temperatures?
-- Which monitoring point should be checked first?
-
-The live layer cannot answer:
-
-- Whether the condition is historically unusual.
-- Whether an event was caused by climate change.
-- Whether an official station observed the same condition.
-
-Because it is a forecast/nowcast estimate, the live layer must be treated as a situational screen. Strong claims should still be validated against station observations, satellite products, or official bulletins.
-
-## 5. Evidence Ladder
-
-The dashboard should treat evidence in layers.
-
-1. Official station observation, when available.
-2. Satellite detection, especially for snow cover.
-3. Reanalysis estimate, such as ERA5.
-4. Forecast or nowcast model output.
-5. Media or social report.
-
-Strong public claims should use at least two independent layers where possible.
-
-## 6. Snowfall vs Snow Cover
-
-Snowfall and snow cover are different.
-
-Snowfall means new snow fell during a period. Snow cover means snow is visible or present on the ground. In the Himalaya, snow cover can persist from previous storms, glaciers, shaded slopes, or old snow patches.
-
-The current MVP measures ERA5 snowfall estimates. A stronger snow module should add:
-
-- MODIS/Terra daily snow cover at 500 m resolution.
-- NOAA/NIC IMS daily snow and ice analysis.
-- Elevation-band aggregation using a digital elevation model.
-- Cloud screening and confidence flags.
-
-## 7. Mountain Terrain Caveat
-
-Himalayan weather changes sharply by elevation and aspect. A credible version of this project must avoid statements like:
-
-```text
-It snowed in Kashmir.
-```
-
-unless the location, elevation, and evidence are specified.
-
-Prefer:
-
-```text
-ERA5 estimated snowfall near [coordinate/elevation] on [date].
-```
-
-or:
-
-```text
-Satellite snow cover expanded above 3,500 m in the Kashmir alpine belt.
-```
-
-## 8. Anomaly Score
-
-The dashboard includes an anomaly score for sorting. It is not a climate-risk score.
-
-The score is a bounded 0-1 screening value derived from the strongest daily signal among heat, cold, precipitation, and unseasonable snow. It is used only to rank candidate events for review.
-
-The score must not be described as:
-
-- climate vulnerability
-- climate impact
-- disaster risk
-- probability of harm
-- attribution confidence
-
-## 9. Validation Plan
-
-Before making public claims, validate a sample of flagged events against:
-
-- IMD station records or official summaries.
-- MODIS/IMS snow-cover rasters for snow events.
-- Local district/state disaster bulletins for heavy rainfall.
-- News archives only as corroborating context, not primary data.
-
-## 10. Expansion Plan
-
-The next methodological upgrades are:
-
-1. Add satellite snow-cover ingestion and elevation bands.
-2. Add IMD station cross-checks where licensing/access allows.
-3. Add uncertainty labels by source and terrain type.
-4. Add sensitivity checks across ERA5 and ERA5-Land for temperature/precipitation.
-5. Add district polygons only after point-level metrics are validated.
+(Citations are to the conventions this tool follows; they do not imply
+endorsement. Verify exact bibliographic details before formal use.)
