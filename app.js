@@ -1,4 +1,5 @@
 const DATA_URL = "./public/data/anomaly_summary.json";
+const LIVE_REFRESH_MS = 10 * 60 * 1000;
 
 const SIGNALS = {
   extreme_heat: { label: "Extreme heat", color: "#b94a34" },
@@ -27,6 +28,10 @@ const LABEL_OFFSETS = {
 
 let dashboardData = null;
 let selectedId = null;
+let liveById = {};
+let liveUpdatedAt = null;
+let map = null;
+let markers = {};
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -64,6 +69,87 @@ function locationIntensity(location) {
   return clamp((location.kpis.recent_anomaly_days_365 || 0) / 120, 0, 1);
 }
 
+function weatherCodeLabel(code) {
+  const labels = {
+    0: "Clear",
+    1: "Mostly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Rime fog",
+    51: "Light drizzle",
+    53: "Drizzle",
+    55: "Dense drizzle",
+    61: "Light rain",
+    63: "Rain",
+    65: "Heavy rain",
+    71: "Light snow",
+    73: "Snow",
+    75: "Heavy snow",
+    80: "Rain showers",
+    81: "Rain showers",
+    82: "Violent showers",
+    85: "Snow showers",
+    86: "Heavy snow showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with hail",
+    99: "Heavy thunderstorm with hail",
+  };
+  return labels[code] || "Current estimate";
+}
+
+function liveUrl(location) {
+  const params = new URLSearchParams({
+    latitude: location.latitude,
+    longitude: location.longitude,
+    current: [
+      "temperature_2m",
+      "precipitation",
+      "rain",
+      "showers",
+      "snowfall",
+      "weather_code",
+      "wind_speed_10m",
+    ].join(","),
+    timezone: "Asia/Kolkata",
+    forecast_days: "1",
+  });
+  return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+}
+
+async function loadLiveLayer() {
+  if (!dashboardData) return;
+  const results = await Promise.allSettled(
+    dashboardData.locations.map(async (location) => {
+      const response = await fetch(liveUrl(location), { cache: "no-store" });
+      if (!response.ok) throw new Error(`${location.id}: HTTP ${response.status}`);
+      const payload = await response.json();
+      return [location.id, payload.current];
+    }),
+  );
+
+  const nextLive = {};
+  results.forEach((result) => {
+    if (result.status === "fulfilled") {
+      const [id, current] = result.value;
+      nextLive[id] = current;
+    }
+  });
+
+  if (Object.keys(nextLive).length) {
+    liveById = nextLive;
+    liveUpdatedAt = new Date();
+    document.getElementById("livePill").textContent = `Live ${liveUpdatedAt.toLocaleTimeString("en", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  } else {
+    document.getElementById("livePill").textContent = "Live layer unavailable";
+  }
+  renderMap();
+  renderSelected();
+}
+
 async function loadData() {
   try {
     const response = await fetch(DATA_URL, { cache: "no-store" });
@@ -71,6 +157,8 @@ async function loadData() {
     dashboardData = await response.json();
     selectedId = dashboardData.locations[0]?.id;
     render();
+    loadLiveLayer();
+    window.setInterval(loadLiveLayer, LIVE_REFRESH_MS);
   } catch (error) {
     document.querySelector(".workspace").innerHTML = `
       <section class="tool-panel empty-state">
@@ -125,8 +213,30 @@ function renderLocationList() {
   });
 }
 
-function renderMap() {
-  const container = document.getElementById("regionMap");
+function markerHtml(location) {
+  const score = locationIntensity(location);
+  const live = liveById[location.id];
+  const hasSnow = Number(live?.snowfall || 0) > 0;
+  const hasRain = Number(live?.precipitation || 0) > 0.2;
+  return `
+    <span class="leaflet-signal-marker ${location.id === selectedId ? "active" : ""}" style="--marker-color:${scoreColor(score)}">
+      <span>${location.kpis.recent_anomaly_days_365}</span>
+      ${hasSnow ? '<i class="weather-chip snow">snow</i>' : ""}
+      ${!hasSnow && hasRain ? '<i class="weather-chip rain">rain</i>' : ""}
+    </span>
+  `;
+}
+
+function markerIcon(location) {
+  return L.divIcon({
+    className: "signal-marker-shell",
+    html: markerHtml(location),
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+  });
+}
+
+function renderFallbackMap(container) {
   container.innerHTML = dashboardData.locations
     .map((location) => {
       const left = clamp(
@@ -162,17 +272,122 @@ function renderMap() {
   });
 }
 
+function renderMap() {
+  const container = document.getElementById("regionMap");
+  if (!window.L) {
+    renderFallbackMap(container);
+    return;
+  }
+
+  if (!map) {
+    map = L.map("regionMap", {
+      zoomControl: false,
+      scrollWheelZoom: false,
+    });
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 12,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+    const bounds = L.latLngBounds(dashboardData.locations.map((location) => [location.latitude, location.longitude]));
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 7 });
+    window.setTimeout(() => map.invalidateSize(), 0);
+    window.setTimeout(() => map.invalidateSize(), 250);
+  }
+
+  dashboardData.locations.forEach((location) => {
+    const live = liveById[location.id];
+    const tooltip = live
+      ? `${location.name}: ${fmt(live.temperature_2m)}C, ${weatherCodeLabel(live.weather_code)}`
+      : `${location.name}: ${location.kpis.recent_anomaly_days_365} anomaly days`;
+    if (!markers[location.id]) {
+      markers[location.id] = L.marker([location.latitude, location.longitude], {
+        icon: markerIcon(location),
+        riseOnHover: true,
+      }).addTo(map);
+      markers[location.id].on("click", () => {
+        selectedId = location.id;
+        render();
+      });
+    } else {
+      markers[location.id].setIcon(markerIcon(location));
+    }
+    markers[location.id].bindTooltip(tooltip, {
+      permanent: location.id === selectedId,
+      direction: "top",
+      className: "map-tooltip",
+      offset: [0, -16],
+    });
+  });
+  window.setTimeout(() => map.invalidateSize(), 0);
+}
+
 function renderSelected() {
   const location = selectedLocation();
   document.getElementById("selectedRegion").textContent = `${location.region} / ${location.state}`;
   document.getElementById("selectedName").textContent = location.name;
   document.getElementById("terrainNote").textContent = location.terrain_note;
 
+  renderPlainSummary(location);
+  renderLivePanel(location);
   renderKpis(location);
   renderDailyChart(location);
   renderMonthlyChart(location);
   renderEvents(location);
   renderAnnualChart(location);
+}
+
+function renderPlainSummary(location) {
+  const topSignals = [
+    ["heat", location.kpis.recent_heat_days_365],
+    ["heavy rain", location.kpis.recent_heavy_precip_days_365],
+    ["cold", location.kpis.recent_cold_days_365],
+    ["rare snow", location.kpis.recent_unseasonable_snow_days_365],
+  ].sort((a, b) => b[1] - a[1]);
+  const [mainSignal, mainCount] = topSignals[0];
+  const days = location.kpis.recent_anomaly_days_365;
+  document.getElementById("plainSummary").textContent =
+    `${location.name} has ${days} recent anomaly days; ${mainSignal} is the dominant signal.`;
+  document.getElementById("plainSummaryDetail").textContent =
+    `${mainCount} days in the last 365 available days were flagged for ${mainSignal}. This is a screening result from ERA5, not an official impact claim.`;
+}
+
+function renderLivePanel(location) {
+  const live = liveById[location.id];
+  const livePanel = document.getElementById("livePanel");
+  if (!live) {
+    livePanel.innerHTML = `
+      <span class="live-dot muted"></span>
+      <div>
+        <strong>Live layer not loaded yet</strong>
+        <p>Historical anomaly metrics below still use the daily ERA5 dataset.</p>
+      </div>
+    `;
+    document.getElementById("liveSummary").textContent = "Live estimates are still loading.";
+    document.getElementById("liveSummaryDetail").textContent =
+      "If the live endpoint fails, the dashboard remains usable as a historical anomaly screen.";
+    return;
+  }
+
+  const condition = weatherCodeLabel(live.weather_code);
+  const updated = liveUpdatedAt
+    ? liveUpdatedAt.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })
+    : "now";
+  const precipitation = Number(live.precipitation || 0);
+  const snowfall = Number(live.snowfall || 0);
+  const liveSignal =
+    snowfall > 0 ? `${fmt(snowfall)} cm snow estimate` : precipitation > 0 ? `${fmt(precipitation)} mm precipitation` : condition;
+
+  livePanel.innerHTML = `
+    <span class="live-dot"></span>
+    <div>
+      <strong>${fmt(live.temperature_2m)}C · ${condition}</strong>
+      <p>${liveSignal}; wind ${fmt(live.wind_speed_10m)} km/h. Updated ${updated}. Source: forecast/nowcast estimate.</p>
+    </div>
+  `;
+  document.getElementById("liveSummary").textContent = `${location.name}: ${fmt(live.temperature_2m)}C and ${condition.toLowerCase()}.`;
+  document.getElementById("liveSummaryDetail").textContent =
+    "This updates in the browser about every 10 minutes and is separate from the slower historical anomaly layer.";
 }
 
 function renderKpis(location) {

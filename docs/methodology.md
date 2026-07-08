@@ -89,7 +89,32 @@ ERA5 is not a station observation.
 
 In steep mountain terrain, point estimates may differ materially from actual valley, slope, ridge, or peak conditions. A dashboard claim about "Kashmir" or "a district" should not be based on a single grid-point estimate.
 
-## 4. Evidence Ladder
+## 4. Live Layer
+
+The dashboard also includes a live/near-live current-conditions layer from the Open-Meteo forecast API.
+
+This layer is intentionally separate from the historical anomaly score.
+
+```text
+Live layer = current forecast/nowcast estimate
+Historical layer = ERA5 day-level anomaly screen
+```
+
+The live layer can answer:
+
+- What is estimated right now at this point?
+- Is the selected point currently seeing rain, snow, wind, or unusual temperatures?
+- Which monitoring point should be checked first?
+
+The live layer cannot answer:
+
+- Whether the condition is historically unusual.
+- Whether an event was caused by climate change.
+- Whether an official station observed the same condition.
+
+Because it is a forecast/nowcast estimate, the live layer must be treated as a situational screen. Strong claims should still be validated against station observations, satellite products, or official bulletins.
+
+## 5. Evidence Ladder
 
 The dashboard should treat evidence in layers.
 
@@ -101,7 +126,7 @@ The dashboard should treat evidence in layers.
 
 Strong public claims should use at least two independent layers where possible.
 
-## 5. Snowfall vs Snow Cover
+## 6. Snowfall vs Snow Cover
 
 Snowfall and snow cover are different.
 
@@ -114,7 +139,7 @@ The current MVP measures ERA5 snowfall estimates. A stronger snow module should 
 - Elevation-band aggregation using a digital elevation model.
 - Cloud screening and confidence flags.
 
-## 6. Mountain Terrain Caveat
+## 7. Mountain Terrain Caveat
 
 Himalayan weather changes sharply by elevation and aspect. A credible version of this project must avoid statements like:
 
@@ -136,7 +161,7 @@ or:
 Satellite snow cover expanded above 3,500 m in the Kashmir alpine belt.
 ```
 
-## 7. Anomaly Score
+## 8. Anomaly Score
 
 The dashboard includes an anomaly score for sorting. It is not a climate-risk score.
 
@@ -150,7 +175,7 @@ The score must not be described as:
 - probability of harm
 - attribution confidence
 
-## 8. Validation Plan
+## 9. Validation Plan
 
 Before making public claims, validate a sample of flagged events against:
 
@@ -159,7 +184,7 @@ Before making public claims, validate a sample of flagged events against:
 - Local district/state disaster bulletins for heavy rainfall.
 - News archives only as corroborating context, not primary data.
 
-## 9. Expansion Plan
+## 10. Expansion Plan
 
 The next methodological upgrades are:
 

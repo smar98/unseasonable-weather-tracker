@@ -12,6 +12,14 @@ This file records the intended source hierarchy and how each source should be us
 - Strength: Easy reproducibility; no key required for non-commercial prototyping.
 - Limitation: API wrapper, not the original data archive; model output should be cited as reanalysis estimates.
 
+### Open-Meteo Forecast API
+
+- URL: https://open-meteo.com/en/docs
+- Role: Live/near-live forecast and nowcast access layer.
+- Current use: Browser-side current temperature, precipitation, snowfall, weather code, and wind speed.
+- Strength: No API key required for prototyping; supports public static dashboard deployment.
+- Limitation: Forecast/nowcast estimate, not official station observation. It should not overwrite the historical anomaly layer.
+
 ### ERA5
 
 - URL: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels
@@ -60,3 +68,5 @@ The dashboard uses these labels:
 - `media_report`: journalistic or social corroboration.
 
 The MVP currently emits `reanalysis_estimate`.
+
+The live panel emits a separate `forecast_or_nowcast` interpretation label in the interface.

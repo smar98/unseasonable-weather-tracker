@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Seasonal Anomaly Tracker</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
+      crossorigin=""
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -13,6 +19,7 @@
         <h1>Seasonal Anomaly Tracker</h1>
       </div>
       <div class="source-strip">
+        <span class="source-pill live-pill" id="livePill">Live layer loading</span>
         <span class="source-pill">ERA5 reanalysis</span>
         <span class="source-pill">1991-2020 baseline</span>
         <span class="source-pill" id="generatedAt">Loading data</span>
@@ -54,22 +61,63 @@
           </div>
         </section>
 
-        <section class="grid-two">
+        <section class="map-workbench">
           <div class="tool-panel">
             <div class="panel-heading">
-              <span>Regional Screen</span>
-              <small>Point estimates</small>
+              <span>Map</span>
+              <small>Click any monitoring point</small>
             </div>
             <div class="region-map" id="regionMap" aria-label="Regional anomaly map"></div>
           </div>
 
           <div class="tool-panel">
             <div class="panel-heading">
-              <span>Recent Signals</span>
-              <small>Last 365 days</small>
+              <span>Location Readout</span>
+              <small id="readoutPeriod">Last 365 days</small>
+            </div>
+            <div class="readout-summary">
+              <span>What is happening?</span>
+              <strong id="plainSummary">Loading anomaly summary.</strong>
+              <p id="plainSummaryDetail">The dashboard compares recent weather with the same time of year in 1991-2020.</p>
+            </div>
+            <div class="live-panel" id="livePanel">
+              <span class="live-dot"></span>
+              <div>
+                <strong>Live layer loading</strong>
+                <p>Current estimates will appear here when the nowcast endpoint responds.</p>
+              </div>
             </div>
             <div class="kpi-grid" id="kpiGrid"></div>
           </div>
+        </section>
+
+        <section class="briefing-grid">
+          <div class="brief-card primary">
+            <span>How to make sense of it</span>
+            <strong>Start with the map, then open the ranked events.</strong>
+            <p>The marker number is recent anomaly days. The readout explains which signal is driving the count.</p>
+          </div>
+          <div class="brief-card">
+            <span>How to read the colors</span>
+            <strong>Color means recent anomaly-day frequency.</strong>
+            <p>Larger numbers mean more recent days outside the seasonal range, not greater harm.</p>
+          </div>
+          <div class="brief-card">
+            <span>Live layer</span>
+            <strong id="liveSummary">Fetching current conditions.</strong>
+            <p id="liveSummaryDetail">Live values are forecast/nowcast estimates and are separate from historical anomaly scores.</p>
+          </div>
+        </section>
+
+        <section class="section-break">
+          <div>
+            <p class="eyebrow">Details after the map</p>
+            <h3>Why was this point flagged?</h3>
+          </div>
+          <p>
+            These views explain the screening result. Use them after selecting a point on the map;
+            they are not required to understand the first-pass signal.
+          </p>
         </section>
 
         <section class="grid-two chart-grid">
@@ -122,6 +170,46 @@
           </div>
         </section>
 
+        <section class="ancillary-grid">
+          <article class="tool-panel">
+            <div class="panel-heading">
+              <span>Methodology</span>
+              <small>Screening rules</small>
+            </div>
+            <ul class="clean-list">
+              <li>Each day is compared with the same day-of-year +/- 7 days in 1991-2020.</li>
+              <li>Heat, cold, precipitation, and snowfall are scored separately before any ranking.</li>
+              <li>The score is a review queue, not climate attribution, impact, or risk.</li>
+            </ul>
+            <a class="text-link" href="docs/methodology.md">Open full methodology</a>
+          </article>
+
+          <article class="tool-panel">
+            <div class="panel-heading">
+              <span>Sources</span>
+              <small>Evidence ladder</small>
+            </div>
+            <ul class="clean-list">
+              <li>Historical anomaly layer: Open-Meteo API wrapping ERA5 reanalysis.</li>
+              <li>Live layer: Open-Meteo forecast/nowcast endpoint.</li>
+              <li>Planned validation: IMD station records plus MODIS/IMS snow cover.</li>
+            </ul>
+            <a class="text-link" href="docs/source-register.md">Open source register</a>
+          </article>
+
+          <article class="tool-panel">
+            <div class="panel-heading">
+              <span>What This Is Not</span>
+              <small>Interpretation guardrail</small>
+            </div>
+            <ul class="clean-list">
+              <li>Not proof that climate change caused a specific event.</li>
+              <li>Not an official IMD observation dashboard.</li>
+              <li>Not a district-wide claim from one mountain point.</li>
+            </ul>
+          </article>
+        </section>
+
         <section class="methodology-band">
           <div>
             <p class="eyebrow">Interpretation boundary</p>
@@ -136,6 +224,11 @@
       </section>
     </main>
 
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <script src="app.js"></script>
   </body>
 </html>

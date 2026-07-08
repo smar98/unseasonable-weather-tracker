@@ -14,6 +14,16 @@ It does not claim that individual events were caused by climate change. The MVP 
 - Extreme cold relative to the same time of year.
 - Heavy precipitation relative to the same time of year.
 - Candidate unseasonable snowfall events.
+- Live/near-live current conditions from a forecast/nowcast endpoint.
+
+## Live Dashboard Behavior
+
+The dashboard has two data layers:
+
+1. **Historical anomaly layer**: generated into `public/data/anomaly_summary.json` from ERA5 via Open-Meteo. This refreshes through GitHub Actions and is intentionally slower because ERA5 has latency.
+2. **Live current-conditions layer**: fetched in the browser from the Open-Meteo forecast API roughly every 10 minutes. This is a nowcast/forecast estimate, not an official station observation.
+
+The live layer is used for situational awareness only. It does not change the historical anomaly score.
 
 ## Current Scope
 
@@ -58,6 +68,7 @@ Key choices:
 - Baseline: 1991-2020.
 - Seasonal comparison: same day-of-year plus/minus 7 days.
 - Source label: reanalysis estimate.
+- Live label: forecast/nowcast estimate.
 - Climate attribution: out of scope.
 
 ## Source Register
