@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seasonal Anomaly Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Western Himalaya public-data monitor</p>
+        <h1>Seasonal Anomaly Tracker</h1>
+      </div>
+      <div class="source-strip">
+        <span class="source-pill">ERA5 reanalysis</span>
+        <span class="source-pill">1991-2020 baseline</span>
+        <span class="source-pill" id="generatedAt">Loading data</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="panel-heading">
+          <span>Locations</span>
+          <small id="locationCount">0</small>
+        </div>
+        <div class="location-list" id="locationList"></div>
+
+        <div class="method-panel">
+          <div class="panel-heading">
+            <span>Evidence Ladder</span>
+          </div>
+          <ol>
+            <li>Station observation</li>
+            <li>Satellite detection</li>
+            <li>Reanalysis estimate</li>
+            <li>Forecast or nowcast</li>
+            <li>Media report</li>
+          </ol>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <section class="location-hero">
+          <div>
+            <p class="eyebrow" id="selectedRegion">Region</p>
+            <h2 id="selectedName">Loading</h2>
+            <p class="terrain-note" id="terrainNote"></p>
+          </div>
+          <div class="confidence-box">
+            <span class="confidence-label">Current evidence</span>
+            <strong>Reanalysis estimate</strong>
+          </div>
+        </section>
+
+        <section class="grid-two">
+          <div class="tool-panel">
+            <div class="panel-heading">
+              <span>Regional Screen</span>
+              <small>Point estimates</small>
+            </div>
+            <div class="region-map" id="regionMap" aria-label="Regional anomaly map"></div>
+          </div>
+
+          <div class="tool-panel">
+            <div class="panel-heading">
+              <span>Recent Signals</span>
+              <small>Last 365 days</small>
+            </div>
+            <div class="kpi-grid" id="kpiGrid"></div>
+          </div>
+        </section>
+
+        <section class="grid-two chart-grid">
+          <div class="tool-panel">
+            <div class="panel-heading">
+              <span>Daily Temperature Anomaly</span>
+              <small>Last 45 available days</small>
+            </div>
+            <div id="dailyChart" class="chart-box"></div>
+          </div>
+
+          <div class="tool-panel">
+            <div class="panel-heading">
+              <span>Monthly Pattern</span>
+              <small>Last 36 months</small>
+            </div>
+            <div id="monthlyChart" class="chart-box"></div>
+          </div>
+        </section>
+
+        <section class="grid-two">
+          <div class="tool-panel">
+            <div class="panel-heading">
+              <span>Candidate Events</span>
+              <small>Ranked by screening score</small>
+            </div>
+            <div class="event-table-wrap">
+              <table class="event-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Signal</th>
+                    <th>Score</th>
+                    <th>Temp</th>
+                    <th>Rain</th>
+                    <th>Snow</th>
+                  </tr>
+                </thead>
+                <tbody id="eventRows"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tool-panel">
+            <div class="panel-heading">
+              <span>Annual Counts</span>
+              <small>Recent period</small>
+            </div>
+            <div id="annualChart" class="chart-box compact"></div>
+          </div>
+        </section>
+
+        <section class="methodology-band">
+          <div>
+            <p class="eyebrow">Interpretation boundary</p>
+            <h3>Weather anomaly, not attribution</h3>
+          </div>
+          <p>
+            Each day is compared with the same day-of-year window in the 1991-2020 baseline.
+            The score ranks candidates for review. Public claims should be validated against
+            official station data, satellite snow cover, or other independent evidence.
+          </p>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
