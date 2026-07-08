@@ -46,6 +46,20 @@ function fmt(value, digits = 1) {
   return Number(value).toFixed(digits);
 }
 
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function setText(id, value) {
+  const element = byId(id);
+  if (element) element.textContent = value;
+}
+
+function setHtml(id, value) {
+  const element = byId(id);
+  if (element) element.innerHTML = value;
+}
+
 function prettyDate(dateText) {
   return new Intl.DateTimeFormat("en", {
     year: "numeric",
@@ -139,28 +153,27 @@ async function loadLiveLayer() {
   if (Object.keys(nextLive).length) {
     liveById = nextLive;
     liveUpdatedAt = new Date();
-    document.getElementById("livePill").textContent = `Live ${liveUpdatedAt.toLocaleTimeString("en", {
+    setText("livePill", `Live ${liveUpdatedAt.toLocaleTimeString("en", {
       hour: "2-digit",
       minute: "2-digit",
-    })}`;
+    })}`);
   } else {
-    document.getElementById("livePill").textContent = "Live layer unavailable";
+    setText("livePill", "Live layer unavailable");
   }
   renderMap();
   renderSelected();
 }
 
 async function loadData() {
+  let response;
   try {
-    const response = await fetch(DATA_URL, { cache: "no-store" });
+    response = await fetch(DATA_URL, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     dashboardData = await response.json();
-    selectedId = dashboardData.locations[0]?.id;
-    render();
-    loadLiveLayer();
-    window.setInterval(loadLiveLayer, LIVE_REFRESH_MS);
   } catch (error) {
-    document.querySelector(".workspace").innerHTML = `
+    const workspace = document.querySelector(".workspace");
+    if (workspace) {
+      workspace.innerHTML = `
       <section class="tool-panel empty-state">
         <div>
           <strong>Dataset not found</strong>
@@ -169,14 +182,36 @@ async function loadData() {
         </div>
       </section>
     `;
+    }
+    return;
+  }
+
+  try {
+    selectedId = dashboardData.locations[0]?.id;
+    render();
+    loadLiveLayer();
+    window.setInterval(loadLiveLayer, LIVE_REFRESH_MS);
+  } catch (error) {
+    const workspace = document.querySelector(".workspace");
+    if (workspace) {
+      workspace.innerHTML = `
+        <section class="tool-panel empty-state">
+          <div>
+            <strong>Dashboard render error</strong>
+            <p>The dataset loaded, but the page shell and script are out of sync. Refresh the page.</p>
+            <p>${error.message}</p>
+          </div>
+        </section>
+      `;
+    }
+    throw error;
   }
 }
 
 function render() {
   const generated = new Date(dashboardData.generated_at_utc);
-  document.getElementById("generatedAt").textContent =
-    `Generated ${generated.toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}`;
-  document.getElementById("locationCount").textContent = dashboardData.locations.length;
+  setText("generatedAt", `Generated ${generated.toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}`);
+  setText("locationCount", dashboardData.locations.length);
 
   renderLocationList();
   renderMap();
@@ -188,7 +223,8 @@ function selectedLocation() {
 }
 
 function renderLocationList() {
-  const container = document.getElementById("locationList");
+  const container = byId("locationList");
+  if (!container) return;
   container.innerHTML = dashboardData.locations
     .map((location) => {
       const score = locationIntensity(location);
@@ -273,7 +309,8 @@ function renderFallbackMap(container) {
 }
 
 function renderMap() {
-  const container = document.getElementById("regionMap");
+  const container = byId("regionMap");
+  if (!container) return;
   if (!window.L) {
     renderFallbackMap(container);
     return;
@@ -324,9 +361,9 @@ function renderMap() {
 
 function renderSelected() {
   const location = selectedLocation();
-  document.getElementById("selectedRegion").textContent = `${location.region} / ${location.state}`;
-  document.getElementById("selectedName").textContent = location.name;
-  document.getElementById("terrainNote").textContent = location.terrain_note;
+  setText("selectedRegion", `${location.region} / ${location.state}`);
+  setText("selectedName", location.name);
+  setText("terrainNote", location.terrain_note);
 
   renderPlainSummary(location);
   renderLivePanel(location);
@@ -346,26 +383,28 @@ function renderPlainSummary(location) {
   ].sort((a, b) => b[1] - a[1]);
   const [mainSignal, mainCount] = topSignals[0];
   const days = location.kpis.recent_anomaly_days_365;
-  document.getElementById("plainSummary").textContent =
-    `${location.name} has ${days} recent anomaly days; ${mainSignal} is the dominant signal.`;
-  document.getElementById("plainSummaryDetail").textContent =
-    `${mainCount} days in the last 365 available days were flagged for ${mainSignal}. This is a screening result from ERA5, not an official impact claim.`;
+  setText("plainSummary", `${location.name} has ${days} recent anomaly days; ${mainSignal} is the dominant signal.`);
+  setText(
+    "plainSummaryDetail",
+    `${mainCount} days in the last 365 available days were flagged for ${mainSignal}. This is a screening result from ERA5, not an official impact claim.`,
+  );
 }
 
 function renderLivePanel(location) {
   const live = liveById[location.id];
-  const livePanel = document.getElementById("livePanel");
+  const livePanel = byId("livePanel");
   if (!live) {
-    livePanel.innerHTML = `
+    if (livePanel) {
+      livePanel.innerHTML = `
       <span class="live-dot muted"></span>
       <div>
         <strong>Live layer not loaded yet</strong>
         <p>Historical anomaly metrics below still use the daily ERA5 dataset.</p>
       </div>
     `;
-    document.getElementById("liveSummary").textContent = "Live estimates are still loading.";
-    document.getElementById("liveSummaryDetail").textContent =
-      "If the live endpoint fails, the dashboard remains usable as a historical anomaly screen.";
+    }
+    setText("liveSummary", "Live estimates are still loading.");
+    setText("liveSummaryDetail", "If the live endpoint fails, the dashboard remains usable as a historical anomaly screen.");
     return;
   }
 
@@ -378,16 +417,17 @@ function renderLivePanel(location) {
   const liveSignal =
     snowfall > 0 ? `${fmt(snowfall)} cm snow estimate` : precipitation > 0 ? `${fmt(precipitation)} mm precipitation` : condition;
 
-  livePanel.innerHTML = `
+  if (livePanel) {
+    livePanel.innerHTML = `
     <span class="live-dot"></span>
     <div>
       <strong>${fmt(live.temperature_2m)}C · ${condition}</strong>
       <p>${liveSignal}; wind ${fmt(live.wind_speed_10m)} km/h. Updated ${updated}. Source: forecast/nowcast estimate.</p>
     </div>
   `;
-  document.getElementById("liveSummary").textContent = `${location.name}: ${fmt(live.temperature_2m)}C and ${condition.toLowerCase()}.`;
-  document.getElementById("liveSummaryDetail").textContent =
-    "This updates in the browser about every 10 minutes and is separate from the slower historical anomaly layer.";
+  }
+  setText("liveSummary", `${location.name}: ${fmt(live.temperature_2m)}C and ${condition.toLowerCase()}.`);
+  setText("liveSummaryDetail", "This updates in the browser about every 10 minutes and is separate from the slower historical anomaly layer.");
 }
 
 function renderKpis(location) {
@@ -399,17 +439,20 @@ function renderKpis(location) {
     ["Snow flags", location.kpis.recent_unseasonable_snow_days_365, "rare snowfall for date window"],
     ["Max score", Math.round(location.kpis.max_recent_score_365 * 100), "screening rank, not attribution"],
   ];
-  document.getElementById("kpiGrid").innerHTML = kpis
-    .map(
-      ([label, value, note]) => `
+  setHtml(
+    "kpiGrid",
+    kpis
+      .map(
+        ([label, value, note]) => `
         <div class="kpi">
           <span>${label}</span>
           <strong>${value}</strong>
           <em>${note}</em>
         </div>
       `,
-    )
-    .join("");
+      )
+      .join(""),
+  );
 }
 
 function svgFrame(width = 720, height = 310) {
@@ -419,7 +462,7 @@ function svgFrame(width = 720, height = 310) {
 function renderDailyChart(location) {
   const records = location.last_45_days || [];
   if (!records.length) {
-    document.getElementById("dailyChart").innerHTML = `<div class="empty-state">No daily records</div>`;
+    setHtml("dailyChart", `<div class="empty-state">No daily records</div>`);
     return;
   }
   const { width, height, pad } = svgFrame();
@@ -459,7 +502,9 @@ function renderDailyChart(location) {
     `<text x="${pad.left}" y="${height - pad.bottom}" fill="#687067" font-size="11">-${maxAbs.toFixed(0)}C</text>`,
   ].join("");
 
-  document.getElementById("dailyChart").innerHTML = `
+  setHtml(
+    "dailyChart",
+    `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily temperature anomaly chart">
       <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#fbfcfa" />
       <line x1="${pad.left}" x2="${width - pad.right}" y1="${zeroY}" y2="${zeroY}" stroke="#222521" stroke-opacity="0.22" />
@@ -473,13 +518,14 @@ function renderDailyChart(location) {
       <text x="${width - 106}" y="70" fill="#687067" font-size="12">precipitation</text>
       ${labels}
     </svg>
-  `;
+  `,
+  );
 }
 
 function renderMonthlyChart(location) {
   const records = location.monthly || [];
   if (!records.length) {
-    document.getElementById("monthlyChart").innerHTML = `<div class="empty-state">No monthly records</div>`;
+    setHtml("monthlyChart", `<div class="empty-state">No monthly records</div>`);
     return;
   }
   const { width, height, pad } = svgFrame();
@@ -509,7 +555,9 @@ function renderMonthlyChart(location) {
     })
     .join(" ");
 
-  document.getElementById("monthlyChart").innerHTML = `
+  setHtml(
+    "monthlyChart",
+    `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Monthly precipitation and temperature anomaly chart">
       <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#fbfcfa" />
       <line x1="${pad.left}" x2="${width - pad.right}" y1="${pad.top + innerH / 2}" y2="${pad.top + innerH / 2}" stroke="#222521" stroke-opacity="0.12" />
@@ -521,7 +569,8 @@ function renderMonthlyChart(location) {
       <text x="${width - 170}" y="28" fill="#687067" font-size="12">bars: precipitation</text>
       <text x="${width - 170}" y="48" fill="#687067" font-size="12">line: temp anomaly</text>
     </svg>
-  `;
+  `,
+  );
 }
 
 function renderEvents(location) {
@@ -540,13 +589,13 @@ function renderEvents(location) {
       `;
     })
     .join("");
-  document.getElementById("eventRows").innerHTML = rows;
+  setHtml("eventRows", rows);
 }
 
 function renderAnnualChart(location) {
   const records = location.annual || [];
   if (!records.length) {
-    document.getElementById("annualChart").innerHTML = `<div class="empty-state">No annual records</div>`;
+    setHtml("annualChart", `<div class="empty-state">No annual records</div>`);
     return;
   }
   const { width, height, pad } = svgFrame();
@@ -574,7 +623,9 @@ function renderAnnualChart(location) {
     })
     .join("");
 
-  document.getElementById("annualChart").innerHTML = `
+  setHtml(
+    "annualChart",
+    `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Annual anomaly count chart">
       <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="#fbfcfa" />
       ${bars}
@@ -585,7 +636,8 @@ function renderAnnualChart(location) {
       <circle cx="${width - 145}" cy="25" r="5" fill="#356b9a" />
       <text x="${width - 132}" y="29" fill="#687067" font-size="12">rare snow flag</text>
     </svg>
-  `;
+  `,
+  );
 }
 
 loadData();
