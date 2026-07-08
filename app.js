@@ -39,7 +39,8 @@ const FLAG_META = {
 const VALIDATION_META = {
   validated: { label: "Validated", cls: "v-validated" },
   corroborated: { label: "Corroborated", cls: "v-corroborated" },
-  unverified: { label: "Not yet checked", cls: "v-unverified" },
+  unverified: { label: "No public record", cls: "v-unverified" }, // searched, nothing found
+  not_checked: { label: "Not yet checked", cls: "v-unverified" }, // default, not researched
   contradicted: { label: "Contradicted", cls: "v-contradicted" },
 };
 
@@ -464,7 +465,7 @@ function renderNational() {
   if (vs && vs.checked > 0) {
     rows.push(
       `<div class="row"><span>Flags checked against independent evidence</span><b>${vs.checked}</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} not yet checked · ${vs.contradicted} contradicted</span></div>`
+      `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} no public record · ${vs.contradicted} contradicted</span></div>`
     );
   }
   rows.push(renderLeaderboard());
@@ -846,7 +847,7 @@ function renderTopEvents(city) {
   node.innerHTML = top
     .map((event, idx) => {
       const meta = FLAG_META[event.category] || { label: event.category, cls: "" };
-      const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.unverified;
+      const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.not_checked;
       return `<button class="event-card ${meta.cls}" data-top="${idx}">
         <div class="event-card-top">
           <span class="badge ${meta.cls}">${meta.label}</span>
@@ -1257,7 +1258,7 @@ function renderEvents(city) {
   body.innerHTML = events
     .map((event, idx) => {
       const meta = FLAG_META[event.category] || { label: event.category, cls: "" };
-      const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.unverified;
+      const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.not_checked;
       return `<tr data-idx="${idx}">
         <td>${fmtDate(event.date)}</td>
         <td><span class="badge ${meta.cls}">${meta.label}</span></td>
@@ -1277,7 +1278,7 @@ function openModal(event, city) {
   const modal = byId("modal");
   if (!backdrop || !modal) return;
   const meta = FLAG_META[event.category] || { label: event.category, cls: "" };
-  const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.unverified;
+  const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.not_checked;
   const cityName = city.meta.name;
 
   const facts = [];

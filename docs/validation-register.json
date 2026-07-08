@@ -1,5 +1,5 @@
 {
-  "description": "Manual validation register. Each entry links a flagged event (event_id = <city_id>:<date>:<category>) to independent evidence. Status vocabulary: validated (independent observation confirms the condition), corroborated (indirect/partial support, e.g. news or forecast reports consistent with the flag), unverified (not yet checked, or checked and nothing found — see note), contradicted (independent evidence disagrees with the reanalysis flag). Misses are recorded, not deleted — the register doubles as the tool's published error log. Initial sample: 15 events across 7 cities, checked 2026-07-08 via news/IMD-quoted press. Result: 3 validated, 10 corroborated, 2 unverified, 0 contradicted. Station readings quoted in press differ from ERA5 grid-cell values by 1-5 units in several cases; that is the documented station-vs-grid-cell discrepancy, not contradiction.",
+  "description": "Manual validation register. event_id = <city_id>:<date>:<category>. Status: validated (independent observation confirms the condition), corroborated (credible news/forecast consistent, no official measurement), unverified (searched, no public record found \u2014 an honest null, not a failure), contradicted (independent evidence disagrees). Events absent from this file are simply not yet researched. Misses and nulls are kept visible: this is the tool's published evidence log. As of 2026-07-08, 51 events checked across 19 cities: 5 validated, 20 corroborated, 26 no public record, 0 contradicted. Station readings quoted in press differ from ERA5 grid-cell values by 1\u20135 units in several cases; that is the documented station-vs-grid-cell discrepancy, not contradiction.",
   "updated": "2026-07-08",
   "events": [
     {
@@ -12,7 +12,7 @@
     {
       "event_id": "sonamarg:2026-01-23:heavy_precip",
       "status": "corroborated",
-      "note": "Media India (Jan 2026): same Jan 22-23 storm — 'snowfall, avalanches strike Sonamarg', roads blocked, avalanche burying buildings/vehicles; consistent with a very heavy precipitation day (no separate mm measurement found).",
+      "note": "Media India (Jan 2026): same Jan 22-23 storm \u2014 'snowfall, avalanches strike Sonamarg', roads blocked, avalanche burying buildings/vehicles; consistent with a very heavy precipitation day (no separate mm measurement found).",
       "evidence_url": "https://mediaindia.eu/tourism/snowfall-avalanches-strike-sonamarg-and-uttarakhand-roads-blocked/",
       "checked": "2026-07-08"
     },
@@ -26,20 +26,20 @@
     {
       "event_id": "sonamarg:2025-08-26:rare_snow",
       "status": "corroborated",
-      "note": "Deccan Herald (Aug 31, 2025): 'rare late-summer weather event' — Sonamarg and Zojila 'received nearly a foot of snow'; residents worried about premature snow onset. Matches the flagged late-August unseasonal snow episode.",
+      "note": "Deccan Herald (Aug 31, 2025): 'rare late-summer weather event' \u2014 Sonamarg and Zojila 'received nearly a foot of snow'; residents worried about premature snow onset. Matches the flagged late-August unseasonal snow episode.",
       "evidence_url": "https://www.deccanherald.com/india/jammu-and-kashmir/kashmirs-summer-turns-magical-sonamarg-zojila-covered-in-snow-3705420",
       "checked": "2026-07-08"
     },
     {
       "event_id": "sonamarg:2025-10-12:cold_extreme",
       "status": "unverified",
-      "note": "Searched Kashmir cold wave October 2025 / Sonamarg minimum temperature mid-October 2025: found an early-October (Oct 3-8) cold snap with no temperature figures, and dated Sonamarg readings (-5.8 to -12.5°C) only for Dec 2025-Jan 2026. Nothing for Oct 12 specifically; the numerically close -8.3°C press figure is from Jan 19, 2026 and was not stretched to cover this event.",
+      "note": "Searched Kashmir cold wave October 2025 / Sonamarg minimum temperature mid-October 2025: found an early-October (Oct 3-8) cold snap with no temperature figures, and dated Sonamarg readings (-5.8 to -12.5\u00b0C) only for Dec 2025-Jan 2026. Nothing for Oct 12 specifically; the numerically close -8.3\u00b0C press figure is from Jan 19, 2026 and was not stretched to cover this event.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "kolkata:2026-01-01:cold_extreme",
       "status": "validated",
-      "note": "Deccan Herald, citing IMD: Kolkata's season-low minimum of 11°C on Dec 31, 2025 (2.8°C below normal), cold snap continuing into early January. ERA5 grid-cell value 9.6°C; ~1.4°C station-vs-cell gap.",
+      "note": "Deccan Herald, citing IMD: Kolkata's season-low minimum of 11\u00b0C on Dec 31, 2025 (2.8\u00b0C below normal), cold snap continuing into early January. ERA5 grid-cell value 9.6\u00b0C; ~1.4\u00b0C station-vs-cell gap.",
       "evidence_url": "https://www.deccanherald.com/india/west-bengal/cold-conditions-grip-bengal-kolkata-records-seasons-lowest-temperature-on-last-day-of-year-3847403",
       "checked": "2026-07-08"
     },
@@ -60,42 +60,42 @@
     {
       "event_id": "bhopal:2025-08-15:hot_extreme",
       "status": "corroborated",
-      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly — a seasonal-percentile exceedance, not a newsworthy heatwave.",
+      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly \u2014 a seasonal-percentile exceedance, not a newsworthy heatwave.",
       "evidence_url": "https://www.freepressjournal.in/bhopal/madhya-pradesh-august-13-2025-weather-update-79-rainfall-in-state-drought-hits-indore-ujjain-while-heavy-rain-alerts-for-several-districts-today",
       "checked": "2026-07-08"
     },
     {
       "event_id": "bhubaneswar:2025-11-17:cold_extreme",
       "status": "validated",
-      "note": "OMMCOM News, citing IMD: Bhubaneswar's coldest November night in 25 years (12.9°C) on Nov 16, 2025, IMD Yellow Warning for Khurda, cold conditions through Nov 18. ERA5 cell 14.6-15.0°C; station-vs-cell gap ~2°C.",
+      "note": "OMMCOM News, citing IMD: Bhubaneswar's coldest November night in 25 years (12.9\u00b0C) on Nov 16, 2025, IMD Yellow Warning for Khurda, cold conditions through Nov 18. ERA5 cell 14.6-15.0\u00b0C; station-vs-cell gap ~2\u00b0C.",
       "evidence_url": "https://ommcomnews.com/odisha-news/imd-issues-cold-wave-warning-for-four-odisha-districts-as-mercury-plunges/",
       "checked": "2026-07-08"
     },
     {
       "event_id": "pune:2026-03-08:hot_extreme",
       "status": "corroborated",
-      "note": "Multiple outlets: unusual early-March 2026 heat surge in the Pune/Mumbai region; IMD advisory (Mar 7) noting the region peaked near 38.9°C, ~6°C above seasonal average. No source pins Mar 8 at Pune specifically.",
+      "note": "Multiple outlets: unusual early-March 2026 heat surge in the Pune/Mumbai region; IMD advisory (Mar 7) noting the region peaked near 38.9\u00b0C, ~6\u00b0C above seasonal average. No source pins Mar 8 at Pune specifically.",
       "evidence_url": "https://www.pingtvindia.com/india-heatwave-march-2026-imd-warning-alert/",
       "checked": "2026-07-08"
     },
     {
       "event_id": "pune:2025-11-17:cold_extreme",
       "status": "corroborated",
-      "note": "Skymet, citing IMD station data: Pune fell to 9.4°C on Nov 18, 2025 (second-lowest that day), part of the season's first cold wave alongside Nashik at 9.2°C. Within ±1 day of the flagged sequence (Nov 16-19).",
+      "note": "Skymet, citing IMD station data: Pune fell to 9.4\u00b0C on Nov 18, 2025 (second-lowest that day), part of the season's first cold wave alongside Nashik at 9.2\u00b0C. Within \u00b11 day of the flagged sequence (Nov 16-19).",
       "evidence_url": "https://www.skymetweather.com/content/weather-news-and-analysis/pune-nashik-record-lowest-temperatures-cold-wave-conditions-likely",
       "checked": "2026-07-08"
     },
     {
       "event_id": "bengaluru:2025-12-20:cold_extreme",
       "status": "corroborated",
-      "note": "Deccan Herald (Dec 12, 2025), citing IMD: Bengaluru entering its 'coldest December phase in recent years', 12-14°C minimums forecast through the following week (spanning Dec 20). No exact date/value match for Dec 20.",
+      "note": "Deccan Herald (Dec 12, 2025), citing IMD: Bengaluru entering its 'coldest December phase in recent years', 12-14\u00b0C minimums forecast through the following week (spanning Dec 20). No exact date/value match for Dec 20.",
       "evidence_url": "https://www.deccanherald.com/india/karnataka/bengaluru/winter-bites-hard-bengaluru-set-for-coldest-december-phase-in-recent-years-3828684",
       "checked": "2026-07-08"
     },
     {
       "event_id": "hyderabad:2025-12-12:cold_extreme",
       "status": "validated",
-      "note": "Siasat/DNA India: Dec 12, 2025 reported as Hyderabad's coldest day in 7 years, with station readings including University of Hyderabad 6.3°C and Jeedimetla 11°C. Exact date match, IMD-sourced figures.",
+      "note": "Siasat/DNA India: Dec 12, 2025 reported as Hyderabad's coldest day in 7 years, with station readings including University of Hyderabad 6.3\u00b0C and Jeedimetla 11\u00b0C. Exact date match, IMD-sourced figures.",
       "evidence_url": "https://www.siasat.com/hyderabad-records-lowest-temperature-in-7-years-3311333/",
       "checked": "2026-07-08"
     },
@@ -103,6 +103,234 @@
       "event_id": "bengaluru:2025-08-25:cold_extreme",
       "status": "unverified",
       "note": "Searched Bengaluru cool/cloudy weather, heavy rain, waterlogging, and IMD alerts around Aug 25, 2025; found only general August climate averages and unrelated dated rain events (July, Oct 2025). A cloudy monsoon cool day plausibly generates no coverage; the flag remains reanalysis-only.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "new-delhi:2023-10-09:hot_extreme",
+      "status": "unverified",
+      "note": "Searched news + weather archives for Delhi 9 Oct 2023 heat; Oct 2023 monthly max ~35.4\u00b0C but nothing confirms ~36.5\u00b0C on that date. No contradiction.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "new-delhi:2025-11-11:cold_extreme",
+      "status": "corroborated",
+      "note": "Skymet reported Delhi's coldest morning of the season at 10.4\u00b0C on 10 Nov 2025, consistent with the flagged ~10.7\u00b0C on 11 Nov.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.skymetweather.com/content/weather-news-and-analysis/coldest-morning-of-the-season-temperature-in-delhi-is-lowest-104c-cold-wave-conditions-in-these-states"
+    },
+    {
+      "event_id": "new-delhi:2024-03-02:heavy_precip",
+      "status": "corroborated",
+      "note": "Weather Spark logs a thunderstorm with rain at Delhi IGI on 2 Mar 2024; Deccan Herald reports a Delhi-NCR hailstorm on 3 Mar 2024 (unseasonal March rain).",
+      "checked": "2026-07-08",
+      "evidence_url": "https://weatherspark.com/h/m/109191/2024/3/Historical-Weather-in-March-2024-in-Delhi-NCT-India"
+    },
+    {
+      "event_id": "mumbai:2023-09-01:hot_extreme",
+      "status": "unverified",
+      "note": "Searched for Mumbai warm/humid conditions on 1 Sep 2023; found only September seasonal averages, no date-specific report.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "mumbai:2023-09-08:heavy_precip",
+      "status": "corroborated",
+      "note": "SCMP, Gulf News and others report heavy monsoon rain battering Mumbai on 8\u20139 Sep 2023, a fatal Mankhurd building collapse and 200mm+ in 24h.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.scmp.com/news/asia/south-asia/article/3359573/6-killed-mumbai-building-collapse-monsoon-rains-batter-india"
+    },
+    {
+      "event_id": "mumbai:2024-12-17:cold_extreme",
+      "status": "corroborated",
+      "note": "Free Press Journal / Outlook report a mid-Dec 2024 Mumbai cold spell (Santacruz ~14\u00b0C on 16 Dec, season's coldest mornings), consistent with a cool ~16.8\u00b0C around 17 Dec.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.freepressjournal.in/mumbai/mumbai-records-coldest-december-morning-in-9-years-at-137-degrees-celsius"
+    },
+    {
+      "event_id": "jaipur:2024-05-27:hot_extreme",
+      "status": "corroborated",
+      "note": "AccuWeather historical data shows 45.6\u00b0C at Jaipur on 28 May 2024 (one day after the flag); IMD-quoted reports document a late-May 2024 Rajasthan heatwave.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.accuweather.com/en/in/jaipur/205617/may-weather/205617"
+    },
+    {
+      "event_id": "jaipur:2025-10-09:cold_extreme",
+      "status": "unverified",
+      "note": "Searched Jaipur Oct 2025 early cold; typical October lows near 15.5\u00b0C consistent with the flag but no source confirms 9 Oct 2025 specifically.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "jaipur:2023-09-16:heavy_precip",
+      "status": "unverified",
+      "note": "Searched Jaipur rainfall 16 Sep 2023; only regional IMD data (Sep 2023 ~113% of normal nationally), no city/date-specific figure.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "jodhpur:2024-05-24:hot_extreme",
+      "status": "corroborated",
+      "note": "Lokmat Times and other outlets document a severe late-May 2024 Rajasthan heatwave with Jodhpur ~44\u201346\u00b0C, consistent with the flagged ~46.1\u00b0C.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.lokmattimes.com/national/heat-wave-in-rajasthan-maximum-temperature-soars-to-44-degrees-celsius-in-jodhpur-a517/"
+    },
+    {
+      "event_id": "jodhpur:2025-10-09:cold_extreme",
+      "status": "unverified",
+      "note": "Searched Jodhpur / Rajasthan unseasonable cold Oct 2025 and date variants; no news, weather report or IMD data found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "jodhpur:2023-07-08:heavy_precip",
+      "status": "unverified",
+      "note": "Found IMD bulletins on the monsoon's northern limit near Jodhpur around 8\u20139 Jul 2023 but no confirmation of ~23mm daily rainfall on that date.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "chandigarh:2024-07-29:hot_extreme",
+      "status": "unverified",
+      "note": "Searched Chandigarh late-July 2024 heat; no date-specific corroboration found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "chandigarh:2024-05-02:cold_extreme",
+      "status": "unverified",
+      "note": "A subagent proposed 'contradicted' from May-2024 being rainless with 46\u00b0C peak heat, but the flag is a cool NIGHT: our data has 2 May 2024 at min 15.5\u00b0C / max 33.4\u00b0C / 0mm \u2014 a clear dry night, not rain-cooled, and consistent with a pre-heatwave airmass. No direct evidence on the night min itself, so recorded as no-public-record rather than contradicted.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "chandigarh:2023-07-09:heavy_precip",
+      "status": "validated",
+      "note": "ETV Bharat (9 Jul 2023) reports Chandigarh recorded 322.2mm in 24h, breaking a 23-year IMD record, in the major July 2023 north-India flood event.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.etvbharat.com/english/state/haryana/chandigarh-breaks-23-year-rainfall-record-heavy-rains-predicted-for-next-5-days/na20230709141313542542455"
+    },
+    {
+      "event_id": "lucknow:2023-09-02:hot_extreme",
+      "status": "unverified",
+      "note": "Searched Lucknow warm day 2 Sep 2023; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "lucknow:2024-02-10:cold_extreme",
+      "status": "unverified",
+      "note": "Searched Lucknow cold 10 Feb 2024; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "lucknow:2024-08-28:heavy_precip",
+      "status": "unverified",
+      "note": "Searched Lucknow heavy rain 28 Aug 2024; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "ahmedabad:2024-05-23:hot_extreme",
+      "status": "validated",
+      "note": "IMD's official account noted Ahmedabad at 45.5\u00b0C on 24 May 2024 with a heatwave alert; press put 23 May at 46.6\u201346.7\u00b0C, hottest in 8 years, red alert in force.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://x.com/Indiametdept/status/1794250394815918584"
+    },
+    {
+      "event_id": "ahmedabad:2024-03-04:cold_extreme",
+      "status": "corroborated",
+      "note": "DeshGujarat (2 Mar 2024) reports unseasonal rain and strong winds over Ahmedabad from a cyclonic circulation, a plausible cooling trigger ~2 days before the flagged 4 Mar reading.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://deshgujarat.com/2024/03/02/ahmedabad-gets-light-unseasonal-rain/"
+    },
+    {
+      "event_id": "ahmedabad:2023-09-18:heavy_precip",
+      "status": "corroborated",
+      "note": "Outlook reports Ahmedabad got 76mm in 12h to 6pm on 18 Sep 2023 with flooding and evacuations under an IMD red alert; magnitude differs from the flag (likely a different station/window).",
+      "checked": "2026-07-08",
+      "evidence_url": "https://www.outlookindia.com/national/gujarat-9-600-people-shifted-to-safety-after-heavy-rain-overflows-narmada-imd-predicts-extreme-rainfall-till-tuesday-news-318713"
+    },
+    {
+      "event_id": "chennai:2023-12-06:hot_extreme",
+      "status": "unverified",
+      "note": "Cyclone Michaung's heaviest Chennai rain was 2\u20134 Dec 2023, weakening toward Andhra by 6 Dec, so nothing contradicts a warm 6 Dec, but no source positively confirms it. Left as no-public-record.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "chennai:2026-05-12:cold_extreme",
+      "status": "corroborated",
+      "note": "IMD Chennai's extended-range bulletin shows Tamil Nadu at large rainfall excess for 7\u201313 May 2026 with rain on 9\u201313 May, consistent with a rain-suppressed cool max ~12 May (sub-division, not station level).",
+      "checked": "2026-07-08",
+      "evidence_url": "https://mausam.imd.gov.in/chennai/mcdata/erf.pdf"
+    },
+    {
+      "event_id": "chennai:2023-09-18:heavy_precip",
+      "status": "unverified",
+      "note": "Searched Chennai rain 18 Sep 2023; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "shillong:2023-10-07:heavy_precip",
+      "status": "corroborated",
+      "note": "Weather.com's dated 7 Oct 2023 forecast warned of isolated heavy-to-very-heavy rain (64.5\u2013115.5mm) over Assam and Meghalaya for 7\u20138 Oct from a decaying low, matching the flag's region and date.",
+      "checked": "2026-07-08",
+      "evidence_url": "https://weather.com/en-IN/india/news/news/2023-10-07-weekend-weather-oct-7-8-heavy-rain-thunderstorm-in-assam-meghalaya"
+    },
+    {
+      "event_id": "guwahati:2023-08-01:hot_extreme",
+      "status": "unverified",
+      "note": "Searched; no date-specific report for a warm 1 Aug 2023 in Guwahati.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "guwahati:2024-07-02:cold_extreme",
+      "status": "unverified",
+      "note": "A cool monsoon day; searched, no public coverage found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "guwahati:2023-10-03:heavy_precip",
+      "status": "unverified",
+      "note": "Searched; the well-documented 3\u20135 Oct 2023 disaster was the Sikkim GLOF / North Bengal floods ~500km away, which does not match Guwahati \u2014 so no corroboration claimed.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "shillong:2023-08-01:hot_extreme",
+      "status": "unverified",
+      "note": "Warm-for-a-hill-station day; searched, no public coverage found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "shillong:2026-05-02:cold_extreme",
+      "status": "unverified",
+      "note": "Searched; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "gangtok:2023-09-02:hot_extreme",
+      "status": "unverified",
+      "note": "Warm-for-a-hill-station day; searched, no public coverage found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "gangtok:2026-05-11:cold_extreme",
+      "status": "unverified",
+      "note": "Searched; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "gangtok:2024-02-22:heavy_precip",
+      "status": "unverified",
+      "note": "Searched Gangtok/Sikkim precipitation 22 Feb 2024; no date-specific report found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "darjeeling:2023-09-05:hot_extreme",
+      "status": "unverified",
+      "note": "Warm-for-a-hill-station day; searched, no public coverage found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "darjeeling:2024-01-27:cold_extreme",
+      "status": "unverified",
+      "note": "A documented Darjeeling snowfall/cold event was ~17 Jan 2024, 10 days off the flagged 27 Jan, so not counted; no date-matched source found.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "darjeeling:2023-08-25:heavy_precip",
+      "status": "unverified",
+      "note": "Searched Darjeeling heavy rain 25 Aug 2023; no date-specific report found.",
       "checked": "2026-07-08"
     }
   ]

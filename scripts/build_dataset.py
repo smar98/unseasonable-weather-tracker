@@ -633,7 +633,7 @@ def top_events(classified, recent_end: dt.date, city_id: str, validation) -> lis
                     "snow_occ_prob": round_or_none(day.get("snow_occ_prob"), 3),
                     "snow_amount_pct": round_or_none(day.get("snow_amount_pct"), 3),
                     "detail": day["detail"],
-                    "validation": validation.get(event_id, {"status": "unverified"}),
+                    "validation": validation.get(event_id, {"status": "not_checked"}),
                 }
             )
     # dedupe date+category, keep strongest ordering stable
