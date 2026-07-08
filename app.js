@@ -339,14 +339,25 @@ function initMap() {
     zoomControl: true,
     scrollWheelZoom: false,
     attributionControl: true,
+    zoomAnimation: false,
+    fadeAnimation: false,
   });
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: "© OpenStreetMap contributors © CARTO",
     subdomains: "abcd",
     maxZoom: 12,
   }).addTo(map);
-  map.fitBounds([[7.5, 68.0], [35.5, 93.5]]);
+  const INDIA_BOUNDS = [[7.5, 68.0], [35.5, 93.5]];
+  map.fitBounds(INDIA_BOUNDS, { animate: false });
   state.map = map;
+  // the container can be measured before fonts/layout settle; re-measure and
+  // re-frame once everything has loaded, else the view lands off-centre
+  const reframe = () => {
+    map.invalidateSize();
+    map.fitBounds(INDIA_BOUNDS, { animate: false });
+  };
+  setTimeout(reframe, 300);
+  window.addEventListener("load", () => setTimeout(reframe, 100), { once: true });
 
   for (const city of state.index.cities) {
     const marker = L.marker([city.latitude, city.longitude], {

@@ -20,7 +20,7 @@
       integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260708-4" />
+    <link rel="stylesheet" href="styles.css?v=20260708-3" />
   </head>
   <body>
     <header class="topbar">
@@ -235,6 +235,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="app.js?v=20260708-4"></script>
-  </body>
+    <script src="app.js?v=20260708-3"></script>
+  <script>window.addEventListener("load",()=>{setTimeout(()=>{const m=document.getElementById("map");const mr=m?m.getBoundingClientRect():null;const dots=document.querySelectorAll(".city-dot");const info=[];dots.forEach((d,i)=>{if(i<4){const r=d.getBoundingClientRect();info.push(Math.round(r.left)+","+Math.round(r.top))}});const pane=document.querySelector(".leaflet-map-pane");const pt=pane?getComputedStyle(pane).transform:"none";const pre=document.createElement("pre");pre.id="dbg3";pre.textContent="MAP:"+(mr?Math.round(mr.left)+","+Math.round(mr.top)+","+Math.round(mr.width)+"x"+Math.round(mr.height):"none")+" DOTS:"+dots.length+" POS:"+info.join(";")+" PANE:"+pt;document.body.appendChild(pre)},8000)});</script></body>
 </html>
