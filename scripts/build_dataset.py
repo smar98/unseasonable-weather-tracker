@@ -740,9 +740,17 @@ def main() -> int:
             failures.append({"id": city["id"], "error": str(error)})
             print(f"  FAILED {city['id']}: {error}", file=sys.stderr)
 
+    validation_summary = {"checked": 0, "validated": 0, "corroborated": 0, "unverified": 0, "contradicted": 0}
+    for entry in validation.values():
+        status = entry.get("status", "unverified")
+        if status in validation_summary:
+            validation_summary["checked"] += 1
+            validation_summary[status] += 1
+
     index = {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
+        "validation_summary": validation_summary,
         "model": MODEL,
         "model_note": (
             "ERA5-Land (~9 km) blended with ERA5 (~31 km) via Open-Meteo era5_seamless; "

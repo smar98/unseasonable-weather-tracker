@@ -135,11 +135,19 @@ def main() -> int:
         "",
         "## Reading",
         "",
-        "If the Δ column stays small relative to the warming signal "
-        "(recent warm fractions run 0.05–0.10 above the 0.10 null at most "
-        "cities) and flag agreement stays high, the conclusions are not "
-        "artefacts of these choices. Axes not yet examined: ERA5 vs "
-        "era5_seamless source (requires re-fetch), and wet-day pool minimums.",
+        "Observed pattern in the current run: the estimator choice is "
+        "negligible (|Δ| ≤ 0.003, day-level agreement ≥ 0.90). Widening the "
+        "window systematically *lowers* recent warm fractions by up to ~0.02 "
+        "— a wider window blends more of the seasonal cycle into each pool, "
+        "inflating its spread and raising thresholds in shoulder seasons — "
+        "but under every configuration recent fractions remain well above "
+        "the 0.10 null and the ordering of cities is unchanged. The headline "
+        "conclusions do not flip. Day-level hot-flag agreement of 0.66–0.82 "
+        "across windows means individual borderline flags DO depend on the "
+        "window choice; this is why the UI shows each event's full rank "
+        "statement rather than a bare binary flag. Axes not yet examined: "
+        "ERA5 vs era5_seamless source (requires re-fetch), and wet-day pool "
+        "minimums.",
         "",
     ]
     OUT_FILE.write_text("\n".join(lines), encoding="utf-8")

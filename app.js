@@ -256,6 +256,13 @@ function renderNational() {
   const rows = [
     `<div class="row"><span>Cities with a flagged day in the last week of data</span><b>${flaggedWeek.length} of ${cities.length}</b></div>`,
   ];
+  const vs = state.index.validation_summary;
+  if (vs && vs.checked > 0) {
+    rows.push(
+      `<div class="row"><span>Flags checked against independent evidence</span><b>${vs.checked}</b></div>`,
+      `<div class="row"><span style="color:var(--slate)">→ ${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} unverified · ${vs.contradicted} contradicted</span></div>`
+    );
+  }
   for (const c of notable) {
     const flag = bestFlag(c.latest_flag.flags);
     const meta = FLAG_META[flag] || { label: flag, cls: "" };
@@ -866,18 +873,35 @@ function renderPrecipChart(city) {
 /* ---------- events table + drilldown ---------- */
 
 function evidenceStatement(event) {
+  // a day can carry several flags (e.g. cold + heavy rain), so the statement
+  // must follow the event's own category, not whichever detail exists first
   const d = event.detail || {};
   const only = (k, n, what) =>
     k === 0 ? `No ${what} (of ${n}) reached this value` : `Only ${k} of ${n} ${what} reached this value`;
-  if (d.tmax) return only(d.tmax.n_at_or_above, d.tmax.n_baseline, "comparable baseline days");
-  if (d.tmin)
-    return d.tmin.n_at_or_below === 0
-      ? `No comparable baseline day (of ${d.tmin.n_baseline}) was this cold`
-      : `Only ${d.tmin.n_at_or_below} of ${d.tmin.n_baseline} comparable baseline days were this cold`;
-  if (d.precip) return only(d.precip.n_at_or_above, d.precip.n_baseline, "comparable baseline wet days");
-  if (d.snow_occurrence)
-    return `Only ${d.snow_occurrence.baseline_snow_days} of ${d.snow_occurrence.baseline_days} comparable baseline days had snow at all`;
-  if (d.snow_amount) return only(d.snow_amount.n_at_or_above, d.snow_amount.n_baseline, "baseline snow days");
+  const statements = {
+    heat: () => d.tmax && only(d.tmax.n_at_or_above, d.tmax.n_baseline, "comparable baseline days"),
+    cold: () =>
+      d.tmin &&
+      (d.tmin.n_at_or_below === 0
+        ? `No comparable baseline day (of ${d.tmin.n_baseline}) was this cold`
+        : `Only ${d.tmin.n_at_or_below} of ${d.tmin.n_baseline} comparable baseline days were this cold`),
+    precip: () => d.precip && only(d.precip.n_at_or_above, d.precip.n_baseline, "comparable baseline wet days"),
+    snowOcc: () =>
+      d.snow_occurrence &&
+      `Only ${d.snow_occurrence.baseline_snow_days} of ${d.snow_occurrence.baseline_days} comparable baseline days had snow at all`,
+    snowAmt: () => d.snow_amount && only(d.snow_amount.n_at_or_above, d.snow_amount.n_baseline, "baseline snow days"),
+  };
+  const order = {
+    hot_extreme: ["heat"], warm_day: ["heat"],
+    cold_extreme: ["cold"], cold_night: ["cold"],
+    heavy_precip: ["precip"],
+    rare_snow: ["snowOcc", "snowAmt"],
+    exceptional_snow: ["snowAmt", "snowOcc"],
+  }[event.category] || ["heat", "cold", "precip", "snowOcc", "snowAmt"];
+  for (const key of order) {
+    const s = statements[key]();
+    if (s) return s;
+  }
   return "";
 }
 

@@ -146,6 +146,8 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
   align-items: start;
 }
 
+.layout > * { min-width: 0; }
+
 .sidebar { position: sticky; top: 64px; display: flex; flex-direction: column; gap: 14px; }
 
 /* ---- cards ------------------------------------------------------------- */
@@ -184,7 +186,7 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 
 .national { display: flex; flex-direction: column; gap: 8px; }
 .national .row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
-.national .row b { font-weight: 700; }
+.national .row b { font-weight: 700; white-space: nowrap; }
 
 /* ---- city list ----------------------------------------------------------- */
 
@@ -488,7 +490,7 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 /* ---- responsive ------------------------------------------------------------- */
 
 @media (max-width: 980px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: static; order: 2; }
   .detail { order: 1; }
   #map { height: 300px; }

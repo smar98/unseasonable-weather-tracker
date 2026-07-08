@@ -1,5 +1,109 @@
 {
-  "description": "Manual validation register. Each entry links a flagged event (event_id = <city_id>:<date>:<category>) to independent evidence. Status vocabulary: validated (independent observation confirms the condition), corroborated (indirect/partial support, e.g. news reports), unverified (not yet checked), contradicted (independent evidence disagrees with the reanalysis flag). Misses are recorded, not deleted — the register doubles as the tool's published error log.",
+  "description": "Manual validation register. Each entry links a flagged event (event_id = <city_id>:<date>:<category>) to independent evidence. Status vocabulary: validated (independent observation confirms the condition), corroborated (indirect/partial support, e.g. news or forecast reports consistent with the flag), unverified (not yet checked, or checked and nothing found — see note), contradicted (independent evidence disagrees with the reanalysis flag). Misses are recorded, not deleted — the register doubles as the tool's published error log. Initial sample: 15 events across 7 cities, checked 2026-07-08 via news/IMD-quoted press. Result: 3 validated, 10 corroborated, 2 unverified, 0 contradicted. Station readings quoted in press differ from ERA5 grid-cell values by 1-5 units in several cases; that is the documented station-vs-grid-cell discrepancy, not contradiction.",
   "updated": "2026-07-08",
-  "events": []
+  "events": [
+    {
+      "event_id": "sonamarg:2026-01-23:exceptional_snow",
+      "status": "corroborated",
+      "note": "Kashmir InFocus (Jan 2026): heavy Western Disturbance hit J&K on the evening of Jan 22 with peak impact Jan 23; Sonamarg recorded 'heavy snowfall of over two feet', avalanches, stranded vehicles, road closed by authorities.",
+      "evidence_url": "https://kashmirinfocus.com/2026/01/kashmir-snowfall-flight-cancellations-highway-closures-2026/",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "sonamarg:2026-01-23:heavy_precip",
+      "status": "corroborated",
+      "note": "Media India (Jan 2026): same Jan 22-23 storm — 'snowfall, avalanches strike Sonamarg', roads blocked, avalanche burying buildings/vehicles; consistent with a very heavy precipitation day (no separate mm measurement found).",
+      "evidence_url": "https://mediaindia.eu/tourism/snowfall-avalanches-strike-sonamarg-and-uttarakhand-roads-blocked/",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "sonamarg:2025-12-21:exceptional_snow",
+      "status": "corroborated",
+      "note": "Outlook India: higher reaches of Kashmir received snowfall on Dec 21, 2025 at the start of Chillai-Kalan; officials confirmed ongoing snowfall at Sonamarg that day; ~2-8 inches at Gulmarg, 6 inches at Sadhna Top.",
+      "evidence_url": "https://www.outlookindia.com/national/kashmir-sees-snowfall-and-rain-as-chillai-kalan-winter-period-begins",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "sonamarg:2025-08-26:rare_snow",
+      "status": "corroborated",
+      "note": "Deccan Herald (Aug 31, 2025): 'rare late-summer weather event' — Sonamarg and Zojila 'received nearly a foot of snow'; residents worried about premature snow onset. Matches the flagged late-August unseasonal snow episode.",
+      "evidence_url": "https://www.deccanherald.com/india/jammu-and-kashmir/kashmirs-summer-turns-magical-sonamarg-zojila-covered-in-snow-3705420",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "sonamarg:2025-10-12:cold_extreme",
+      "status": "unverified",
+      "note": "Searched Kashmir cold wave October 2025 / Sonamarg minimum temperature mid-October 2025: found an early-October (Oct 3-8) cold snap with no temperature figures, and dated Sonamarg readings (-5.8 to -12.5°C) only for Dec 2025-Jan 2026. Nothing for Oct 12 specifically; the numerically close -8.3°C press figure is from Jan 19, 2026 and was not stretched to cover this event.",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "kolkata:2026-01-01:cold_extreme",
+      "status": "validated",
+      "note": "Deccan Herald, citing IMD: Kolkata's season-low minimum of 11°C on Dec 31, 2025 (2.8°C below normal), cold snap continuing into early January. ERA5 grid-cell value 9.6°C; ~1.4°C station-vs-cell gap.",
+      "evidence_url": "https://www.deccanherald.com/india/west-bengal/cold-conditions-grip-bengal-kolkata-records-seasons-lowest-temperature-on-last-day-of-year-3847403",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "kolkata:2025-07-29:heavy_precip",
+      "status": "corroborated",
+      "note": "Daily Jagran, citing an IMD yellow alert: heavy rainfall of 7-11 cm forecast for Kolkata for Jul 29, 2025, with active monsoon rain confirmed the day before. Forecast-consistent; no official post-event observed total found.",
+      "evidence_url": "https://www.thedailyjagran.com/india/kolkata-weather-rain-thunderstorms-to-hit-city-tomorrow-imd-issues-yellow-alert-check-bengal-forecast-10255463",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "bhopal:2025-07-05:heavy_precip",
+      "status": "corroborated",
+      "note": "Skymet (Jul 3, 2025): heavy-to-very-heavy rain and flood risk forecast for Bhopal and surrounding MP districts specifically for Jul 5-8, 2025. Forecast-consistent; no exact observed mm figure located.",
+      "evidence_url": "https://www.skymetweather.com/content/weather-news-and-analysis/southwest-monsoon-intensifies-over-madhya-pradesh-heavy-rain-and-flood-risk-from-july-5-to-8-severe-weather-to-reach-east-rajasthan-by-july-9-relief-likely-from-july-12",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "bhopal:2025-08-15:hot_extreme",
+      "status": "corroborated",
+      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly — a seasonal-percentile exceedance, not a newsworthy heatwave.",
+      "evidence_url": "https://www.freepressjournal.in/bhopal/madhya-pradesh-august-13-2025-weather-update-79-rainfall-in-state-drought-hits-indore-ujjain-while-heavy-rain-alerts-for-several-districts-today",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "bhubaneswar:2025-11-17:cold_extreme",
+      "status": "validated",
+      "note": "OMMCOM News, citing IMD: Bhubaneswar's coldest November night in 25 years (12.9°C) on Nov 16, 2025, IMD Yellow Warning for Khurda, cold conditions through Nov 18. ERA5 cell 14.6-15.0°C; station-vs-cell gap ~2°C.",
+      "evidence_url": "https://ommcomnews.com/odisha-news/imd-issues-cold-wave-warning-for-four-odisha-districts-as-mercury-plunges/",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "pune:2026-03-08:hot_extreme",
+      "status": "corroborated",
+      "note": "Multiple outlets: unusual early-March 2026 heat surge in the Pune/Mumbai region; IMD advisory (Mar 7) noting the region peaked near 38.9°C, ~6°C above seasonal average. No source pins Mar 8 at Pune specifically.",
+      "evidence_url": "https://www.pingtvindia.com/india-heatwave-march-2026-imd-warning-alert/",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "pune:2025-11-17:cold_extreme",
+      "status": "corroborated",
+      "note": "Skymet, citing IMD station data: Pune fell to 9.4°C on Nov 18, 2025 (second-lowest that day), part of the season's first cold wave alongside Nashik at 9.2°C. Within ±1 day of the flagged sequence (Nov 16-19).",
+      "evidence_url": "https://www.skymetweather.com/content/weather-news-and-analysis/pune-nashik-record-lowest-temperatures-cold-wave-conditions-likely",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "bengaluru:2025-12-20:cold_extreme",
+      "status": "corroborated",
+      "note": "Deccan Herald (Dec 12, 2025), citing IMD: Bengaluru entering its 'coldest December phase in recent years', 12-14°C minimums forecast through the following week (spanning Dec 20). No exact date/value match for Dec 20.",
+      "evidence_url": "https://www.deccanherald.com/india/karnataka/bengaluru/winter-bites-hard-bengaluru-set-for-coldest-december-phase-in-recent-years-3828684",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "hyderabad:2025-12-12:cold_extreme",
+      "status": "validated",
+      "note": "Siasat/DNA India: Dec 12, 2025 reported as Hyderabad's coldest day in 7 years, with station readings including University of Hyderabad 6.3°C and Jeedimetla 11°C. Exact date match, IMD-sourced figures.",
+      "evidence_url": "https://www.siasat.com/hyderabad-records-lowest-temperature-in-7-years-3311333/",
+      "checked": "2026-07-08"
+    },
+    {
+      "event_id": "bengaluru:2025-08-25:cold_extreme",
+      "status": "unverified",
+      "note": "Searched Bengaluru cool/cloudy weather, heavy rain, waterlogging, and IMD alerts around Aug 25, 2025; found only general August climate averages and unrelated dated rain events (July, Oct 2025). A cloudy monsoon cool day plausibly generates no coverage; the flag remains reanalysis-only.",
+      "checked": "2026-07-08"
+    }
+  ]
 }
