@@ -22,12 +22,16 @@ const COLORS = {
   navy: "#17324d",
 };
 
+/* Labels are season-relative on purpose: a flag means "unusual FOR THIS
+   place and season", not an absolute extreme. Calling a 5.7°C Himalayan
+   day "extreme heat" (it cleared the local summer p95) reads as absurd and
+   discredits the tool; "unusually warm for the season" is what it means. */
 const FLAG_META = {
-  hot_extreme: { label: "Extreme heat", cls: "heat", color: COLORS.heat, rank: 0 },
-  cold_extreme: { label: "Extreme cold", cls: "cold", color: COLORS.cold, rank: 1 },
+  hot_extreme: { label: "Unusually warm", cls: "heat", color: COLORS.heat, rank: 0 },
+  cold_extreme: { label: "Unusually cold", cls: "cold", color: COLORS.cold, rank: 1 },
   rare_snow: { label: "Rare-season snow", cls: "snow", color: COLORS.snow, rank: 2 },
-  exceptional_snow: { label: "Exceptional snow", cls: "snow", color: COLORS.snow, rank: 3 },
-  heavy_precip: { label: "Heavy precipitation", cls: "precip", color: COLORS.precip, rank: 4 },
+  exceptional_snow: { label: "Exceptional snowfall", cls: "snow", color: COLORS.snow, rank: 3 },
+  heavy_precip: { label: "Unusually wet", cls: "precip", color: COLORS.precip, rank: 4 },
   warm_day: { label: "Warm day", cls: "heat", color: COLORS.heat, rank: 5 },
   cold_night: { label: "Cold night", cls: "cold", color: COLORS.cold, rank: 6 },
 };
@@ -89,6 +93,160 @@ function fmtDate(iso) {
 function pctLabel(p) {
   if (p == null) return "–";
   return `${(p * 100).toFixed(1)}th`;
+}
+
+function mean(values) {
+  const clean = values.filter((v) => v != null && !Number.isNaN(v));
+  return clean.length ? clean.reduce((a, b) => a + b, 0) / clean.length : null;
+}
+
+/* ---------- plain-language "so-what" generation ----------
+   Every takeaway is a deterministic template with numeric cutoffs, so it is
+   auditable and fails predictably. Statistical anchor: warm-day count over
+   365d is ~Binomial(365, 0.10), sigma ~= 5.7, so +/-9 days ~= 1.5 sigma is a
+   defensible "notable" threshold. The sign of every gap drives the wording:
+   BELOW expected means calmer-than-normal, never "alarming". */
+
+const NOTABLE_TEMP = 9;   // warm/cold day count departure (~1.5 sigma)
+const NOTABLE_PRECIP = 4; // heavy-rain day departure
+
+function cityStats(city) {
+  const k = city.kpis;
+  const warmExcess = (k.warm_days ?? 0) - (k.warm_days_expected ?? 0);
+  const coldExcess = (k.cold_nights ?? 0) - (k.cold_nights_expected ?? 0);
+  const qual = city.annual.filter((a) => a.coverage_days >= 350 && a.warm_day_fraction != null);
+  const last10 = qual.slice(-10);
+  const recentWarm = last10.length >= 8 ? mean(last10.map((a) => a.warm_day_fraction)) : null;
+  const recentCold = last10.length >= 8 ? mean(last10.map((a) => a.cold_night_fraction)) : null;
+  const recentAnom = last10.length >= 8 ? mean(last10.map((a) => a.mean_tmax_anom)) : null;
+  const snowDays = (k.rare_snow_days || 0) + (k.exceptional_snow_days || 0);
+  return { k, warmExcess, coldExcess, recentWarm, recentCold, recentAnom, snowDays };
+}
+
+// tone drives the banner tint and the icon: warm / cool / calm / swing / neutral
+function cityVerdict(city) {
+  const s = cityStats(city);
+  const { warmExcess, coldExcess } = s;
+  let tone, headline;
+  if (warmExcess >= NOTABLE_TEMP && coldExcess >= NOTABLE_TEMP) {
+    tone = "swing";
+    headline = "has been swinging between unusual heat and unusual cold";
+  } else if (warmExcess >= NOTABLE_TEMP) {
+    tone = "warm";
+    headline = "has been running warmer than its seasonal normal";
+  } else if (coldExcess >= NOTABLE_TEMP) {
+    tone = "cool";
+    headline = "has been running cooler than its seasonal normal";
+  } else if (warmExcess <= -NOTABLE_TEMP && coldExcess <= -NOTABLE_TEMP) {
+    tone = "calm";
+    headline = "has been quieter than its seasonal normal";
+  } else {
+    tone = "neutral";
+    headline = "has stayed close to its seasonal normal";
+  }
+
+  const counts =
+    `${s.k.warm_days} warm days against about ${s.k.warm_days_expected} expected, ` +
+    `and ${s.k.cold_nights} cold nights against about ${s.k.cold_nights_expected}, over the past year`;
+
+  let trend = "";
+  if (s.recentWarm != null) {
+    if (s.recentWarm >= 0.13) {
+      const mult = (s.recentWarm / 0.1).toFixed(1);
+      trend = ` Over the last decade, warm days have come about ${mult}× as often as they did across 1991–2020`;
+      if (s.recentAnom != null && s.recentAnom >= 0.4) {
+        trend += `, and typical daily highs now run about ${s.recentAnom.toFixed(1)}°C above the baseline`;
+      }
+      trend += ".";
+    } else if (s.recentWarm <= 0.07) {
+      trend = " Over the last decade, warm days have become rarer than across the 1991–2020 baseline.";
+    } else {
+      trend = " Over the last decade the long-run rate has stayed close to its 1991–2020 baseline.";
+    }
+  }
+
+  let snow = "";
+  if (city.meta.snow_capable && s.snowDays >= 1) {
+    snow = ` It also logged ${s.snowDays} snow ${s.snowDays === 1 ? "day" : "days"} outside the seasonal norm.`;
+  }
+
+  return {
+    tone,
+    text: `${city.meta.name} ${headline} — ${counts}.${trend}${snow}`,
+  };
+}
+
+// one KPI's meaning: sign-correct gap text + which class colours it
+function kpiMeaning(count, expected, concernClass, threshold) {
+  if (expected == null) return { gap: null, cls: concernClass, tag: "" };
+  const diff = count - expected;
+  if (diff >= threshold) {
+    return { gap: `${diff} more than the ~${expected} expected`, cls: concernClass, tag: "unusual" };
+  }
+  if (diff <= -threshold) {
+    return { gap: `${Math.abs(diff)} fewer than the ~${expected} expected`, cls: "calm", tag: "quieter than normal" };
+  }
+  return { gap: `about the ~${expected} expected`, cls: "calm", tag: "near normal" };
+}
+
+// per-chart one-liners; nulls where a chart has too little data to speak
+function chartTakeaways(city) {
+  const s = cityStats(city);
+  const k = city.kpis;
+
+  // trend
+  let trend;
+  if (s.recentWarm == null) {
+    trend = "How often each year runs outside the seasonal normal.";
+  } else if (s.recentWarm >= 0.13) {
+    trend =
+      `Warm days now fill about ${Math.round(s.recentWarm * 100)}% of the year — ` +
+      `roughly ${(s.recentWarm / 0.1).toFixed(1)}× the 10% a stable climate would give` +
+      (s.recentCold != null ? `, while cold nights have thinned to about ${Math.round(s.recentCold * 100)}%.` : ".");
+  } else if (s.recentWarm <= 0.07) {
+    trend = "Warm days have grown rarer than the 10% a stable climate would give — this place is not warming against its own baseline.";
+  } else {
+    trend = "Both lines still hover near the 10% a stable climate predicts — no clear long-run drift here.";
+  }
+
+  // ribbon
+  const hot = k.hot_extreme_days || 0;
+  const coldFlags = city.last_365.filter((d) => d.f && d.f.includes("cold_extreme")).length;
+  let ribbon;
+  if (hot === 0 && coldFlags === 0) {
+    ribbon = "No day in the past year broke the seasonal envelope — an unremarkable year, which the tool is built to say plainly.";
+  } else {
+    ribbon =
+      `The daily high left the 1991–2020 envelope on ${hot} unusually warm ` +
+      `and ${coldFlags} unusually cold ${hot + coldFlags === 1 ? "day" : "days"} in the past year.`;
+  }
+
+  // precip
+  const pm = kpiMeaning(k.heavy_precip_days || 0, k.heavy_precip_days_expected, "precip", NOTABLE_PRECIP);
+  let precip;
+  if (pm.tag === "unusual") {
+    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. Rain arrived unusually concentrated.`;
+  } else if (pm.tag === "quieter than normal") {
+    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. Fewer downpours than usual.`;
+  } else {
+    precip = `${k.heavy_precip_days} heavy-rain days, ${pm.gap} — nothing unusual in how the rain fell.`;
+  }
+
+  // events
+  const vs = state.index.validation_summary;
+  const n = city.events.length;
+  let events;
+  if (!n) {
+    events = "No candidate events in the last three years.";
+  } else {
+    events =
+      `${n} candidate ${n === 1 ? "event" : "events"} in three years` +
+      (vs && vs.checked
+        ? `. Across all cities, ${vs.checked} flags have been checked against independent evidence: ${vs.validated} validated, ${vs.corroborated} corroborated, ${vs.contradicted} contradicted.`
+        : ".");
+  }
+
+  return { trend, ribbon, precip, events };
 }
 
 /* ---------- SVG helpers ---------- */
@@ -253,17 +411,21 @@ function renderNational() {
     )
     .slice(0, 4);
 
+  const top = notable[0];
+  const topClause = top
+    ? ` The most unusual right now: <a href="#${top.id}" data-city="${top.id}">${esc(top.name)}</a> (${(FLAG_META[bestFlag(top.latest_flag.flags)] || {}).label || ""}, ${fmtDate(top.latest_flag.date)}).`
+    : "";
   const rows = [
-    `<div class="row"><span>Cities with a flagged day in the last week of data</span><b>${flaggedWeek.length} of ${cities.length}</b></div>`,
+    `<p class="national-verdict">In the last week of data, <b>${flaggedWeek.length} of ${cities.length}</b> cities logged at least one day outside their seasonal normal.${topClause}</p>`,
   ];
   const vs = state.index.validation_summary;
   if (vs && vs.checked > 0) {
     rows.push(
       `<div class="row"><span>Flags checked against independent evidence</span><b>${vs.checked}</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">→ ${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} unverified · ${vs.contradicted} contradicted</span></div>`
+      `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} unverified · ${vs.contradicted} contradicted</span></div>`
     );
   }
-  for (const c of notable) {
+  for (const c of notable.slice(1, 4)) {
     const flag = bestFlag(c.latest_flag.flags);
     const meta = FLAG_META[flag] || { label: flag, cls: "" };
     rows.push(
@@ -271,7 +433,7 @@ function renderNational() {
     );
   }
   rows.push(
-    `<div class="row"><span class="tip-muted" style="color:var(--mist)">Reanalysis lag: data runs to ${fmtDate(recentEnd)}</span></div>`
+    `<div class="row"><span style="color:var(--mist)">Reanalysis lag: data runs to ${fmtDate(recentEnd)}</span></div>`
   );
   setHtml("national-summary", rows.join(""));
   const box = byId("national-summary");
@@ -428,10 +590,13 @@ async function selectCity(id) {
   try {
     if (status) status.hidden = true;
     renderHeader(city);
+    renderVerdict(city);
     renderKpis(city);
+    renderTakeaways(city);
     renderTrendChart(city);
     renderRibbonChart(city);
     renderPrecipChart(city);
+    renderTopEvents(city);
     renderEvents(city);
     scheduleLive(city);
   } catch (error) {
@@ -451,16 +616,37 @@ function renderHeader(city) {
   if (header) header.hidden = false;
   setText("city-name", city.meta.name);
   setText("city-where", `${city.meta.state} · ${city.meta.region}`);
+  // elevation caveat is only load-bearing where the grid cell and the town
+  // differ sharply (Himalaya); elsewhere it is noise, so suppress it
   const cellElev = city.meta.grid_cell_elevation_m;
   const townElev = city.meta.town_elevation_m;
   let elevNote = "";
-  if (cellElev != null && townElev != null) {
-    const gap = Math.abs(cellElev - townElev);
+  if (cellElev != null && townElev != null && Math.abs(cellElev - townElev) > 300) {
     elevNote =
-      `Values describe the ERA5 grid cell (<b>${Math.round(cellElev)} m</b>), not the town point (<b>${Math.round(townElev)} m</b>).` +
-      (gap > 300 ? " In steep terrain treat this as the surrounding landscape, not the town itself." : "");
+      `These values describe the ERA5 grid cell at about <b>${Math.round(cellElev)} m</b>, ` +
+      `not the town at ${Math.round(townElev)} m — in steep terrain, read it as the surrounding landscape.`;
   }
   setHtml("city-elev", elevNote);
+}
+
+const VERDICT_ICON = { warm: "▲", cool: "▼", calm: "•", swing: "↕", neutral: "•" };
+
+function renderVerdict(city) {
+  const node = byId("city-verdict");
+  if (!node) return;
+  const v = cityVerdict(city);
+  node.className = `verdict verdict-${v.tone}`;
+  node.innerHTML =
+    `<span class="verdict-mark">${VERDICT_ICON[v.tone] || "•"}</span>` +
+    `<p class="verdict-text">${esc(v.text)}</p>`;
+}
+
+function renderTakeaways(city) {
+  const t = chartTakeaways(city);
+  setText("trend-title", t.trend);
+  setText("ribbon-title", t.ribbon);
+  setText("precip-title", t.precip);
+  setText("events-title", t.events);
 }
 
 function scheduleLive(city) {
@@ -489,8 +675,8 @@ async function fetchLive(city) {
       `<span class="live-chip">wind ${current.wind_speed_10m != null ? Math.round(current.wind_speed_10m) : "–"} km/h</span>`,
     ];
     strip.innerHTML =
-      `<span class="live-tag">Now · nowcast</span>${chips.join("")}` +
-      `<span style="color:var(--mist)">forecast-model estimate — weakest evidence tier, no effect on anomaly flags</span>`;
+      `<span class="live-tag">Right now</span>${chips.join("")}` +
+      `<span class="live-caveat">live forecast estimate · does not affect the anomaly flags above</span>`;
   } catch {
     strip.innerHTML = `<span class="live-tag">Now</span><span style="color:var(--mist)">live conditions unavailable</span>`;
   }
@@ -500,36 +686,85 @@ async function fetchLive(city) {
 
 function renderKpis(city) {
   const k = city.kpis;
-  const cards = [];
+  // each card leads with meaning (the signed gap), coloured by DIRECTION of
+  // departure, not by hazard type — a below-expected count is a calm stretch,
+  // shown grey, never in an alarm colour
   const defs = [
-    ["heat", "Warm days · 365d", k.warm_days, k.warm_days_expected, "beyond seasonal p90"],
-    ["heat", "Extreme heat · 365d", k.hot_extreme_days, k.hot_extreme_days_expected, "beyond seasonal p95"],
-    ["cold", "Cold nights · 365d", k.cold_nights, k.cold_nights_expected, "below seasonal p10"],
-    ["precip", "Heavy precip · 365d", k.heavy_precip_days, k.heavy_precip_days_expected, "wet-day p95 exceeded"],
+    { label: "Warm days", count: k.warm_days, exp: k.warm_days_expected, concern: "heat", thr: NOTABLE_TEMP },
+    { label: "Unusually warm days", count: k.hot_extreme_days, exp: k.hot_extreme_days_expected, concern: "heat", thr: 6 },
+    { label: "Cold nights", count: k.cold_nights, exp: k.cold_nights_expected, concern: "cold", thr: NOTABLE_TEMP },
+    { label: "Heavy-rain days", count: k.heavy_precip_days, exp: k.heavy_precip_days_expected, concern: "precip", thr: NOTABLE_PRECIP },
   ];
+  const cards = defs.map(({ label, count, exp, concern, thr }) => {
+    const m = kpiMeaning(count ?? 0, exp, concern, thr);
+    const tag = m.tag ? `<span class="kpi-tag ${m.cls}">${m.tag}</span>` : "";
+    return `<div class="kpi ${m.cls}">
+      <div class="label">${esc(label)} · last year</div>
+      <p class="value">${count != null ? count : "–"}</p>
+      <div class="expected">${esc(m.gap || "")} ${tag}</div>
+    </div>`;
+  });
   if (city.meta.snow_capable) {
-    defs.push([
-      "snow",
-      "Unusual snow · 365d",
-      (k.rare_snow_days || 0) + (k.exceptional_snow_days || 0),
-      null,
-      "rare-season or exceptional amount",
-    ]);
-  }
-  for (const [cls, label, value, expected, note] of defs) {
+    const snow = (k.rare_snow_days || 0) + (k.exceptional_snow_days || 0);
     cards.push(
-      `<div class="kpi ${cls}">
-        <div class="label">${esc(label)}</div>
-        <p class="value">${value != null ? value : "–"}</p>
-        <div class="expected">${
-          expected != null
-            ? `vs <b>≈${expected}</b> expected under 1991–2020 climate`
-            : esc(note)
-        }</div>
+      `<div class="kpi ${snow > 0 ? "snow" : "calm"}">
+        <div class="label">Unusual snow · last year</div>
+        <p class="value">${snow}</p>
+        <div class="expected">${snow > 0 ? "rare-season or exceptional amount" : "none outside the seasonal norm"}</div>
       </div>`
     );
   }
   setHtml("kpi-cards", cards.join(""));
+}
+
+/* ---------- most unusual days (best material, out of the modal) ---------- */
+
+// how rare an event was, 0 = rarest (nothing in the baseline matched it)
+function eventRarity(event) {
+  const d = event.detail || {};
+  if (d.tmax) return d.tmax.n_at_or_above / d.tmax.n_baseline;
+  if (d.tmin) return d.tmin.n_at_or_below / d.tmin.n_baseline;
+  if (d.precip) return d.precip.n_at_or_above / d.precip.n_baseline;
+  if (d.snow_occurrence) return d.snow_occurrence.baseline_snow_days / d.snow_occurrence.baseline_days;
+  if (d.snow_amount) return d.snow_amount.n_at_or_above / d.snow_amount.n_baseline;
+  return 1;
+}
+
+function renderTopEvents(city) {
+  const node = byId("top-events");
+  if (!node) return;
+  // one card per phenomenon (the rarest of each category), so a snow city
+  // surfaces its snow, not three near-identical heat days; then the rarest
+  // few overall — with a tie broken toward recency
+  const byCategory = new Map();
+  for (const event of city.events) {
+    const prev = byCategory.get(event.category);
+    if (!prev || eventRarity(event) < eventRarity(prev)) byCategory.set(event.category, event);
+  }
+  const top = [...byCategory.values()]
+    .sort((a, b) => eventRarity(a) - eventRarity(b) || b.date.localeCompare(a.date))
+    .slice(0, 4);
+  if (!top.length) {
+    node.innerHTML = `<div class="status-note">No unusual days flagged in the last three years.</div>`;
+    return;
+  }
+  node.innerHTML = top
+    .map((event, idx) => {
+      const meta = FLAG_META[event.category] || { label: event.category, cls: "" };
+      const validation = VALIDATION_META[event.validation?.status] || VALIDATION_META.unverified;
+      return `<button class="event-card ${meta.cls}" data-top="${idx}">
+        <div class="event-card-top">
+          <span class="badge ${meta.cls}">${meta.label}</span>
+          <span class="badge ${validation.cls}">${validation.label}</span>
+        </div>
+        <p class="event-headline">${esc(evidenceStatement(event))}.</p>
+        <div class="event-meta">${fmtDate(event.date)} · ${event.value != null ? event.value : "–"} ${esc(event.unit)}</div>
+      </button>`;
+    })
+    .join("");
+  node.querySelectorAll("button[data-top]").forEach((btn) =>
+    btn.addEventListener("click", () => openModal(top[Number(btn.dataset.top)], city))
+  );
 }
 
 /* ---------- trend chart ---------- */
