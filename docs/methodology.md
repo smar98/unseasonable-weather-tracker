@@ -174,6 +174,30 @@ the hit rate of a validated sample is reported rather than implied.
   operationally relevant standard in India and are not yet implemented;
   planned as a companion flag set.
 
+## 8a. Planned IMD dual-source layer
+
+The single biggest credibility upgrade is a second, observation-based source
+to corroborate the reanalysis. The concrete first step:
+
+- **Ingest IMD gridded daily rainfall (0.25° × 0.25°, 1901–present; Pai et al.
+  2014)** via the MIT-licensed `imdlib` Python package, which downloads
+  directly from IMD Pune (`imd.get_data('rain', y0, y1)`). It is station-
+  interpolated — methodologically independent of ERA5 — and its 0.25° (~28 km)
+  grid is a defensible match to aggregate against ERA5-Land, unlike the coarser
+  1° (~100 km) IMD temperature product (1951–present), which is phase two.
+- **Merge by aggregating ERA5-Land up to each IMD 0.25° cell** (area-average),
+  not by downscaling IMD — then flag heavy precipitation only where *both*
+  sources cross the threshold in the same direction ("agreement gate").
+- **What it buys:** it most strengthens the heavy-precipitation flag; it does
+  nothing for heat/cold (needs the 1° temperature product) and nothing for snow
+  (IMD publishes no gridded snow product — that flag stays ERA5-only).
+- **Caveats to log in the register:** IMD gridded rainfall is known to
+  underestimate in very wet regions (Western Ghats, NE India) and its network
+  thins after 2008; the data is free but not open-licensed (non-commercial
+  reproduction restriction + mandatory citation of Pai et al. 2014). Per-station
+  daily data is gated behind the paid IMD-DSP portal; NOAA GHCN-Daily carries
+  ~3,800 India-flagged stations as a free but uneven fallback.
+
 ## 9. References
 
 - Zhang, X., et al. (2011). Indices for monitoring changes in extremes based on

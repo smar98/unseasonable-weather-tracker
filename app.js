@@ -39,8 +39,25 @@ const FLAG_META = {
 const VALIDATION_META = {
   validated: { label: "Validated", cls: "v-validated" },
   corroborated: { label: "Corroborated", cls: "v-corroborated" },
-  unverified: { label: "Unverified", cls: "v-unverified" },
+  unverified: { label: "Not yet checked", cls: "v-unverified" },
   contradicted: { label: "Contradicted", cls: "v-contradicted" },
+};
+
+// map/list dot colour = the city's overall state (its verdict tone), NOT the
+// type of its most recent flag — so a near-normal city reads grey, not red
+const TONE_COLOR = {
+  warm: COLORS.heat,
+  cool: COLORS.cold,
+  swing: COLORS.ochre,
+  calm: "#aeb9bf",
+  neutral: "#cdd5da",
+};
+const TONE_LABEL = {
+  warm: "Running warmer",
+  cool: "Running cooler",
+  swing: "Both extremes",
+  calm: "Quieter than normal",
+  neutral: "Near normal",
 };
 
 const WEATHER_CODES = {
@@ -123,27 +140,30 @@ function cityStats(city) {
   return { k, warmExcess, coldExcess, recentWarm, recentCold, recentAnom, snowDays };
 }
 
-// tone drives the banner tint and the icon: warm / cool / calm / swing / neutral
+// tone drives the banner tint, the KPI colours and the map dots. Works off
+// the same kpis object present in both index entries and city files.
+function cityTone(kpis) {
+  const we = (kpis.warm_days ?? 0) - (kpis.warm_days_expected ?? 0);
+  const ce = (kpis.cold_nights ?? 0) - (kpis.cold_nights_expected ?? 0);
+  if (we >= NOTABLE_TEMP && ce >= NOTABLE_TEMP) return "swing";
+  if (we >= NOTABLE_TEMP) return "warm";
+  if (ce >= NOTABLE_TEMP) return "cool";
+  if (we <= -NOTABLE_TEMP && ce <= -NOTABLE_TEMP) return "calm";
+  return "neutral";
+}
+
+const TONE_HEADLINE = {
+  swing: "has been swinging between unusual heat and unusual cold",
+  warm: "has been running warmer than its seasonal normal",
+  cool: "has been running cooler than its seasonal normal",
+  calm: "has been quieter than its seasonal normal",
+  neutral: "has stayed close to its seasonal normal",
+};
+
 function cityVerdict(city) {
   const s = cityStats(city);
-  const { warmExcess, coldExcess } = s;
-  let tone, headline;
-  if (warmExcess >= NOTABLE_TEMP && coldExcess >= NOTABLE_TEMP) {
-    tone = "swing";
-    headline = "has been swinging between unusual heat and unusual cold";
-  } else if (warmExcess >= NOTABLE_TEMP) {
-    tone = "warm";
-    headline = "has been running warmer than its seasonal normal";
-  } else if (coldExcess >= NOTABLE_TEMP) {
-    tone = "cool";
-    headline = "has been running cooler than its seasonal normal";
-  } else if (warmExcess <= -NOTABLE_TEMP && coldExcess <= -NOTABLE_TEMP) {
-    tone = "calm";
-    headline = "has been quieter than its seasonal normal";
-  } else {
-    tone = "neutral";
-    headline = "has stayed close to its seasonal normal";
-  }
+  const tone = cityTone(city.kpis);
+  const headline = TONE_HEADLINE[tone];
 
   const counts =
     `${s.k.warm_days} warm days against about ${s.k.warm_days_expected} expected, ` +
@@ -153,9 +173,10 @@ function cityVerdict(city) {
   if (s.recentWarm != null) {
     if (s.recentWarm >= 0.13) {
       const mult = (s.recentWarm / 0.1).toFixed(1);
-      trend = ` Over the last decade, warm days have come about ${mult}× as often as they did across 1991–2020`;
+      trend = ` Over the last decade, warm days have come about ${mult}× as often as across the 1991–2020 baseline`;
       if (s.recentAnom != null && s.recentAnom >= 0.4) {
-        trend += `, and typical daily highs now run about ${s.recentAnom.toFixed(1)}°C above the baseline`;
+        const rounded = Math.round(s.recentAnom * 2) / 2;
+        trend += `, and typical daily highs now run roughly ${rounded}°C above it`;
       }
       trend += ".";
     } else if (s.recentWarm <= 0.07) {
@@ -189,6 +210,27 @@ function kpiMeaning(count, expected, concernClass, threshold) {
   return { gap: `about the ~${expected} expected`, cls: "calm", tag: "near normal" };
 }
 
+// temperature KPIs need the city's tone: fewer cold nights is a WARM-direction
+// signal in a warming city, not a "quiet" one — only both-ends-down (calm) is
+// genuinely quiet. Colour reflects climate direction, not just the raw sign.
+function tempMeaning(kind, count, expected, tone, threshold) {
+  if (expected == null) return { gap: "", cls: "calm", tag: "" };
+  const diff = count - expected;
+  const more = `${diff} more than the ~${expected} expected`;
+  const fewer = `${Math.abs(diff)} fewer than the ~${expected} expected`;
+  if (Math.abs(diff) < threshold) return { gap: `about the ~${expected} expected`, cls: "calm", tag: "near normal" };
+  if (kind === "warm") {
+    if (diff >= threshold) return { gap: more, cls: "heat", tag: "unusually warm" };
+    if (tone === "calm") return { gap: fewer, cls: "calm", tag: "quieter than normal" };
+    return { gap: fewer, cls: "cold", tag: "fewer warm days" };
+  }
+  // cold nights
+  if (diff >= threshold) return { gap: more, cls: "cold", tag: "more cold nights" };
+  if (tone === "calm") return { gap: fewer, cls: "calm", tag: "quieter than normal" };
+  if (tone === "warm" || tone === "swing") return { gap: fewer, cls: "heat", tag: "fewer cold nights" };
+  return { gap: fewer, cls: "calm", tag: "fewer cold nights" };
+}
+
 // per-chart one-liners; nulls where a chart has too little data to speak
 function chartTakeaways(city) {
   const s = cityStats(city);
@@ -201,12 +243,12 @@ function chartTakeaways(city) {
   } else if (s.recentWarm >= 0.13) {
     trend =
       `Warm days now fill about ${Math.round(s.recentWarm * 100)}% of the year — ` +
-      `roughly ${(s.recentWarm / 0.1).toFixed(1)}× the 10% a stable climate would give` +
+      `roughly ${(s.recentWarm / 0.1).toFixed(1)}× the 10% the 1991–2020 baseline would give` +
       (s.recentCold != null ? `, while cold nights have thinned to about ${Math.round(s.recentCold * 100)}%.` : ".");
   } else if (s.recentWarm <= 0.07) {
-    trend = "Warm days have grown rarer than the 10% a stable climate would give — this place is not warming against its own baseline.";
+    trend = "Warm days have grown rarer than the 10% the 1991–2020 baseline implies — this place is not running warmer against its own history.";
   } else {
-    trend = "Both lines still hover near the 10% a stable climate predicts — no clear long-run drift here.";
+    trend = "Both lines still hover near the 10% the 1991–2020 baseline implies — no clear long-run drift here.";
   }
 
   // ribbon
@@ -413,7 +455,7 @@ function renderNational() {
 
   const top = notable[0];
   const topClause = top
-    ? ` The most unusual right now: <a href="#${top.id}" data-city="${top.id}">${esc(top.name)}</a> (${(FLAG_META[bestFlag(top.latest_flag.flags)] || {}).label || ""}, ${fmtDate(top.latest_flag.date)}).`
+    ? ` Most recently flagged: <a href="#${top.id}" data-city="${top.id}">${esc(top.name)}</a> (${(FLAG_META[bestFlag(top.latest_flag.flags)] || {}).label || ""}, ${fmtDate(top.latest_flag.date)}).`
     : "";
   const rows = [
     `<p class="national-verdict">In the last week of data, <b>${flaggedWeek.length} of ${cities.length}</b> cities logged at least one day outside their seasonal normal.${topClause}</p>`,
@@ -422,16 +464,14 @@ function renderNational() {
   if (vs && vs.checked > 0) {
     rows.push(
       `<div class="row"><span>Flags checked against independent evidence</span><b>${vs.checked}</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} unverified · ${vs.contradicted} contradicted</span></div>`
+      `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} not yet checked · ${vs.contradicted} contradicted</span></div>`
     );
   }
-  for (const c of notable.slice(1, 4)) {
-    const flag = bestFlag(c.latest_flag.flags);
-    const meta = FLAG_META[flag] || { label: flag, cls: "" };
-    rows.push(
-      `<div class="row"><span><a href="#${c.id}" data-city="${c.id}">${esc(c.name)}</a> · ${fmtDate(c.latest_flag.date)}</span><span class="badge ${meta.cls}">${meta.label}</span></div>`
-    );
-  }
+  rows.push(renderLeaderboard());
+  rows.push(
+    `<details class="climate-note"><summary>Could this be a sign of climate change?</summary>` +
+    `<p>One unusual day, or one city, is weather — this tool never claims a single event was <em>caused</em> by climate change; that needs attribution modelling it doesn't do. But switch the ranking to <b>Decade</b>: across most cities, warm days now come far more often than the 1991–2020 baseline predicts, and cold nights less often. That direction — more warm extremes, fewer cold ones, almost everywhere at once — is the fingerprint of a warming climate. What you can see here is that drift; proving causation for any one event is a separate, harder question.</p></details>`
+  );
   rows.push(
     `<div class="row"><span style="color:var(--mist)">Reanalysis lag: data runs to ${fmtDate(recentEnd)}</span></div>`
   );
@@ -444,7 +484,64 @@ function renderNational() {
         selectCity(a.dataset.city);
       })
     );
+    box.querySelectorAll("button[data-tab]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        state.leaderTab = btn.dataset.tab;
+        renderNational();
+      })
+    );
   }
+}
+
+const LEADER_TABS = {
+  week: {
+    label: "This week",
+    caption: "Most flagged days in the last 7 days of data",
+    value: (c) => c.flags_7d || 0,
+    fmt: (v) => `${v} ${v === 1 ? "day" : "days"}`,
+    ok: (c) => (c.flags_7d || 0) > 0,
+  },
+  month: {
+    label: "This month",
+    caption: "Most flagged days in the last 30 days of data",
+    value: (c) => c.flags_30d || 0,
+    fmt: (v) => `${v} ${v === 1 ? "day" : "days"}`,
+    ok: (c) => (c.flags_30d || 0) > 0,
+  },
+  decade: {
+    label: "This decade",
+    caption: "Warm days furthest above the 1991–2020 baseline, last 10 years",
+    value: (c) => c.recent10_warm ?? 0,
+    fmt: (v) => `${(v / 0.1).toFixed(1)}× baseline`,
+    ok: (c) => c.recent10_warm != null,
+  },
+};
+
+function renderLeaderboard() {
+  const tab = state.leaderTab || "week";
+  const cfg = LEADER_TABS[tab];
+  const ranked = state.index.cities
+    .filter(cfg.ok)
+    .sort((a, b) => cfg.value(b) - cfg.value(a))
+    .slice(0, 5);
+  const tabs = Object.entries(LEADER_TABS)
+    .map(([key, c]) => `<button data-tab="${key}" class="${key === tab ? "active" : ""}">${c.label}</button>`)
+    .join("");
+  const list = ranked.length
+    ? ranked
+        .map(
+          (c, i) =>
+            `<li><span class="rank">${i + 1}</span>` +
+            `<a href="#${c.id}" data-city="${c.id}">${esc(c.name)}</a>` +
+            `<span class="leader-val">${cfg.fmt(cfg.value(c))}</span></li>`
+        )
+        .join("")
+    : `<li class="leader-empty">No cities flagged in this window.</li>`;
+  return (
+    `<div class="leader"><div class="leader-tabs">${tabs}</div>` +
+    `<p class="leader-caption">Where India is most unusual — ${cfg.caption}.</p>` +
+    `<ol class="leader-list">${list}</ol></div>`
+  );
 }
 
 function addDays(iso, delta) {
@@ -469,15 +566,14 @@ function renderCityList(query) {
   for (const [region, cities] of groups) {
     parts.push(`<div class="region-label">${esc(region)}</div>`);
     for (const city of cities) {
-      const flag = city.latest_flag ? bestFlag(city.latest_flag.flags) : null;
-      const color = flag ? FLAG_META[flag].color : "#d3dbdf";
+      const tone = cityTone(city.kpis);
+      const color = TONE_COLOR[tone];
       const active = city.id === state.selectedId ? " active" : "";
-      const sub = city.latest_flag ? fmtDate(city.latest_flag.date) : "no recent flags";
       parts.push(
-        `<button class="city-row${active}" data-city="${city.id}">
+        `<button class="city-row${active}" data-city="${city.id}" title="${TONE_LABEL[tone]}">
           <span class="flag-dot" style="background:${color}"></span>
           <span>${esc(city.name)}</span>
-          <span class="sub">${sub}</span>
+          <span class="sub">${TONE_LABEL[tone]}</span>
         </button>`
       );
     }
@@ -533,8 +629,7 @@ function initMap() {
 }
 
 function cityIcon(city, selected) {
-  const flag = city.latest_flag ? bestFlag(city.latest_flag.flags) : null;
-  const color = flag ? FLAG_META[flag].color : "#c3ccd1";
+  const color = TONE_COLOR[cityTone(city.kpis)];
   const size = selected ? 18 : 12;
   return L.divIcon({
     className: "",
@@ -686,17 +781,17 @@ async function fetchLive(city) {
 
 function renderKpis(city) {
   const k = city.kpis;
-  // each card leads with meaning (the signed gap), coloured by DIRECTION of
-  // departure, not by hazard type — a below-expected count is a calm stretch,
-  // shown grey, never in an alarm colour
+  const tone = cityTone(k);
+  // each card leads with meaning (the signed gap), coloured by climate
+  // DIRECTION of departure, not hazard type. Temperature cards are tone-aware
+  // so "fewer cold nights" reads as warming (not "quiet") in a warming city.
   const defs = [
-    { label: "Warm days", count: k.warm_days, exp: k.warm_days_expected, concern: "heat", thr: NOTABLE_TEMP },
-    { label: "Unusually warm days", count: k.hot_extreme_days, exp: k.hot_extreme_days_expected, concern: "heat", thr: 6 },
-    { label: "Cold nights", count: k.cold_nights, exp: k.cold_nights_expected, concern: "cold", thr: NOTABLE_TEMP },
-    { label: "Heavy-rain days", count: k.heavy_precip_days, exp: k.heavy_precip_days_expected, concern: "precip", thr: NOTABLE_PRECIP },
+    { label: "Warm days", count: k.warm_days, m: tempMeaning("warm", k.warm_days ?? 0, k.warm_days_expected, tone, NOTABLE_TEMP) },
+    { label: "Unusually warm days", count: k.hot_extreme_days, m: kpiMeaning(k.hot_extreme_days ?? 0, k.hot_extreme_days_expected, "heat", 6) },
+    { label: "Cold nights", count: k.cold_nights, m: tempMeaning("cold", k.cold_nights ?? 0, k.cold_nights_expected, tone, NOTABLE_TEMP) },
+    { label: "Heavy-rain days", count: k.heavy_precip_days, m: kpiMeaning(k.heavy_precip_days ?? 0, k.heavy_precip_days_expected, "precip", NOTABLE_PRECIP) },
   ];
-  const cards = defs.map(({ label, count, exp, concern, thr }) => {
-    const m = kpiMeaning(count ?? 0, exp, concern, thr);
+  const cards = defs.map(({ label, count, m }) => {
     const tag = m.tag ? `<span class="kpi-tag ${m.cls}">${m.tag}</span>` : "";
     return `<div class="kpi ${m.cls}">
       <div class="label">${esc(label)} · last year</div>

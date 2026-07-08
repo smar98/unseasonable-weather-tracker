@@ -20,7 +20,7 @@
       integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260708-6" />
+    <link rel="stylesheet" href="styles.css?v=20260708-7" />
   </head>
   <body>
     <header class="topbar">
@@ -45,14 +45,44 @@
         season in a fixed 1991–2020 baseline — flags are screening signals to
         verify, not proof. <a href="#how-to-read">How this works ↓</a>
       </p>
+      <details class="why">
+        <summary>Why does unseasonable weather matter?</summary>
+        <div class="why-body">
+          <p>
+            It is the timing, not just the heat or cold, that does the damage.
+            Crops are planted to a calendar: an unseasonal warm spell can make
+            wheat ripen early, and rain at the wrong week can rot a standing
+            harvest — far more costly than a hot day in peak summer everyone
+            already plans for.
+          </p>
+          <ul>
+            <li><b>Farming.</b> Off-season heat, cold snaps and unseasonal rain hit yields and prices hardest because nothing is prepared for them.</li>
+            <li><b>Water.</b> When Himalayan snow falls or melts out of season, it shifts river flow and reservoir planning for the plains downstream.</li>
+            <li><b>Health.</b> Out-of-season heat catches people, hospitals and power grids before the summer routine kicks in.</li>
+            <li><b>Disasters.</b> Unseasonal cloudbursts and snow drive floods, landslides and avalanches in terrain that isn't braced for them.</li>
+          </ul>
+          <p class="why-foot">
+            That is why this tool asks “unusual <em>for this season</em>?”, not
+            “hot or cold?”. A 5&nbsp;°C January day in Kashmir can matter more
+            than a 40&nbsp;°C May day that everyone expects.
+          </p>
+        </div>
+      </details>
     </section>
 
     <main class="layout">
       <aside class="sidebar">
         <div class="card map-card">
           <div id="map"></div>
+          <div class="map-legend">
+            <span class="key"><span class="dot" style="background:#c25541"></span>Running warmer</span>
+            <span class="key"><span class="dot" style="background:#4478b8"></span>Running cooler</span>
+            <span class="key"><span class="dot" style="background:#c77d1e"></span>Both extremes</span>
+            <span class="key"><span class="dot" style="background:#aeb9bf"></span>Near normal</span>
+          </div>
           <p class="map-note" id="map-note">
-            Dot colour = most recent flagged signal in the last 365 days.
+            Each dot is a city, coloured by how its past year compares with its
+            own 1991–2020 seasonal normal.
           </p>
         </div>
 
@@ -101,7 +131,7 @@
               <span class="what"
                 >Share of days each year beyond the 1991–2020 seasonal 90th/10th
                 percentiles; 9-year mean, annual faint. The dashed line is the
-                ~10% a stable climate would produce.</span
+                ~10% expected under the 1991–2020 baseline.</span
               >
             </div>
             <div class="chart-wrap" id="trend-chart"></div>
@@ -111,7 +141,7 @@
           <!-- best material, surfaced out of the modal -->
           <div class="card" id="top-events-card">
             <div class="card-head">
-              <h2>The most unusual days</h2>
+              <h2>The most unusual days · last 3 years</h2>
               <span class="what">Click any day for the full evidence and how to verify it.</span>
             </div>
             <div class="card-body top-events" id="top-events"></div>
@@ -251,6 +281,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="app.js?v=20260708-6"></script>
+    <script src="app.js?v=20260708-7"></script>
   </body>
 </html>

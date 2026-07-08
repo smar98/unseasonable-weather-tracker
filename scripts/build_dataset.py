@@ -717,8 +717,27 @@ def main() -> int:
             dataset = build_city_dataset(city, records, api_elevation, recent_end, validation)
             out_path = OUTPUT_DIR / "cities" / f"{city['id']}.json"
             out_path.write_text(json.dumps(dataset, separators=(",", ":")) + "\n", encoding="utf-8")
+            recent_days = dataset["last_365"]
             latest_flags = next(
-                (day for day in reversed(dataset["last_365"]) if day.get("f")), None
+                (day for day in reversed(recent_days) if day.get("f")), None
+            )
+            # national-leaderboard fields: flagged-day counts over short windows,
+            # and the last-decade warm/cold exceedance rates for the "decade" view
+            flags_7d = sum(1 for day in recent_days[-7:] if day.get("f"))
+            flags_30d = sum(1 for day in recent_days[-30:] if day.get("f"))
+            qual = [
+                a for a in dataset["annual"]
+                if a["coverage_days"] >= 350 and a.get("warm_day_fraction") is not None
+            ]
+            recent10 = qual[-10:]
+            recent10_warm = (
+                round(statistics.fmean([a["warm_day_fraction"] for a in recent10]), 4)
+                if len(recent10) >= 8 else None
+            )
+            recent10_cold = (
+                round(statistics.fmean([a["cold_night_fraction"] for a in recent10
+                                        if a.get("cold_night_fraction") is not None]), 4)
+                if len(recent10) >= 8 else None
             )
             index_entries.append(
                 {
@@ -730,6 +749,10 @@ def main() -> int:
                     "longitude": city["longitude"],
                     "snow_capable": dataset["meta"]["snow_capable"],
                     "kpis": dataset["kpis"],
+                    "flags_7d": flags_7d,
+                    "flags_30d": flags_30d,
+                    "recent10_warm": recent10_warm,
+                    "recent10_cold": recent10_cold,
                     "latest_flag": (
                         {"date": latest_flags["d"], "flags": latest_flags["f"]}
                         if latest_flags else None
