@@ -257,6 +257,27 @@
           </div>
         </div>
       </div>
+      <div class="card method-card navycard">
+        <div class="card-head"><h3>Method &amp; AI-use note</h3></div>
+        <div class="card-body">
+          <ul>
+            <li>
+              <b>Method.</b> ERA5/ERA5-Land daily values compared to the same
+              season across 1991–2020 with ETCCDI percentile indices
+              (leave-one-year-out inside the baseline). Cross-checked against
+              NOAA station temperatures and IMD gauge rainfall; a sample is
+              hand-checked against news/IMD. Fully reproducible from the code.
+            </li>
+            <li>
+              <b>AI use.</b> Built by the author with an AI coding assistant
+              (Claude) pair-programming the pipeline, charts, and copy. Every
+              threshold and claim was author-reviewed; the automated station and
+              gauge cross-checks exist so results rest on data, not on anyone's
+              say-so.
+            </li>
+          </ul>
+        </div>
+      </div>
       <p class="dek" style="margin-top: 14px">
         Full methodology, source register, and validation log:
         <a href="docs/methodology.md">methodology</a> ·
@@ -266,12 +287,20 @@
     </section>
 
     <footer class="footer">
-      <b>Sources.</b> ERA5 / ERA5-Land reanalysis (Hersbach et al. 2020) via the
-      Open-Meteo historical API; live conditions via the Open-Meteo forecast API;
-      basemap © OpenStreetMap contributors, © CARTO. Indices follow the ETCCDI
-      percentile family (Zhang et al. 2011) with documented deviations. All values
-      are reanalysis estimates, not station observations. Code and data:
-      <a href="https://github.com/smar98/unseasonable-weather-tracker">GitHub</a>.
+      <p class="footer-credit">
+        Built by <b>Sanchit Mardia</b> ·
+        <a href="https://github.com/smar98" target="_blank" rel="noopener">github.com/smar98</a> ·
+        <a href="https://github.com/smar98/unseasonable-weather-tracker" target="_blank" rel="noopener">source &amp; data</a>
+      </p>
+      <p>
+        <b>Sources.</b> ERA5 / ERA5-Land reanalysis (Hersbach et al. 2020) via the
+        Open-Meteo historical API; observed station data from NOAA ISD/GHCN via
+        Meteostat; IMD gridded rainfall (Pai et al. 2014); live conditions via the
+        Open-Meteo forecast API; basemap © OpenStreetMap contributors, © CARTO.
+        Indices follow the ETCCDI percentile family (Zhang et al. 2011) with
+        documented deviations. Reanalysis values are estimates, not station
+        observations.
+      </p>
     </footer>
 
     <div class="modal-backdrop" id="modal-backdrop">

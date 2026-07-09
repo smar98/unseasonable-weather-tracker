@@ -719,6 +719,12 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 .method-card { border-top: 3px solid var(--navy); }
 .method-card.teal { border-top-color: var(--brand); }
 .method-card.ochre { border-top-color: var(--ochre); }
+.method-card.navycard { border-top-color: var(--navy); grid-column: 1 / -1; margin-top: 14px; }
+.method-card.navycard ul { columns: 2; column-gap: 28px; }
+@media (max-width: 700px) { .method-card.navycard ul { columns: 1; } }
+
+.footer-credit { font-size: 13px; color: var(--charcoal); margin: 0 0 8px; }
+.footer-credit b { font-weight: 700; }
 .method-card ul { margin: 8px 0 0; padding-left: 18px; color: var(--slate); font-size: 13px; }
 .method-card li { margin: 4px 0; }
 
