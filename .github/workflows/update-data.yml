@@ -17,15 +17,18 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install meteostat pandas
+        run: pip install meteostat pandas imdlib
       - name: Refresh observed station data (NOAA ISD/GHCN via Meteostat)
         run: python scripts/fetch_observed.py
-        continue-on-error: true # observed layer is corroboration; never block the ERA5 refresh
+        continue-on-error: true # corroboration layers must never block the ERA5 refresh
+      - name: Refresh IMD gridded rainfall (current year)
+        run: python scripts/fetch_imd_rain.py --since 2025
+        continue-on-error: true
       - name: Update ERA5 data + rebuild (incremental)
         run: python scripts/build_dataset.py --mode update
       - name: Commit changed dataset
         run: |
-          git add data_cache obs_cache public/data
+          git add data_cache obs_cache imd_cache public/data
           if git diff --cached --quiet; then
             echo "No dataset changes"
             exit 0

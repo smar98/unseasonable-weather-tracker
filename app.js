@@ -469,6 +469,14 @@ function renderNational() {
       `<div class="row"><span style="color:var(--slate)">${os.temp_events_agree} of ${os.temp_events_checked} within ${os.tolerance_c}°C, across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km</span></div>`
     );
   }
+  const ir = state.index.imd_rain_summary;
+  if (ir && ir.precip_events_checked > 0) {
+    const rpct = Math.round((ir.precip_events_agree / ir.precip_events_checked) * 100);
+    rows.push(
+      `<div class="row"><span>ERA5 vs IMD gauge rainfall, recent heavy-rain flags</span><b>${rpct}% match</b></div>`,
+      `<div class="row"><span style="color:var(--slate)">${ir.precip_events_agree} of ${ir.precip_events_checked} confirmed — reanalysis rain is harder to pin down than temperature, so rain flags carry more caution</span></div>`
+    );
+  }
   const vs = state.index.validation_summary;
   if (vs && vs.checked > 0) {
     rows.push(
@@ -863,7 +871,7 @@ function renderTopEvents(city) {
         </div>
         <p class="event-headline">${esc(evidenceStatement(event))}.</p>
         <div class="event-meta">${fmtDate(event.date)} · ${event.value != null ? event.value : "–"} ${esc(event.unit)}</div>
-        ${observedLine(event)}
+        ${corroborationLines(event)}
       </button>`;
     })
     .join("");
@@ -872,30 +880,61 @@ function renderTopEvents(city) {
   );
 }
 
-// observed cross-check line for an event card / modal (the "actuals" layer)
-function observedLine(event) {
+// independent cross-checks for an event card / modal. Temperature is checked
+// against the nearest NOAA station; rain against IMD gridded gauge data (the
+// better rain source for India). Snow has neither — stated plainly.
+function corroborationLines(event) {
+  const cat = event.category;
+  if (cat === "heavy_precip") {
+    const m = event.imd;
+    if (m && (m.status === "agree" || m.status === "disagree")) {
+      const word = m.status === "agree" ? "confirms heavy rain" : "shows little rain — treat with caution";
+      return `<div class="obs obs-${m.status}">IMD gauge rainfall ${m.rain_mm} mm vs ERA5 ${m.era5_mm} mm — ${word}</div>`;
+    }
+    if (m && m.status === "no_data") {
+      return `<div class="obs obs-none">IMD rainfall archive ends 2025 — not yet checkable</div>`;
+    }
+    return "";
+  }
+  if (cat === "rare_snow" || cat === "exceptional_snow") {
+    return `<div class="obs obs-none">No independent source — no nearby station, and no gridded snow product exists</div>`;
+  }
+  // temperature flags → nearest station
   const o = event.observed;
-  if (!o) return ""; // snow, or category with no station variable
+  if (!o) return "";
   if (o.status === "no_obs") {
     return `<div class="obs obs-none">Nearest station ${o.station_km} km · no reading that day</div>`;
   }
-  if (o.var === "prcp") {
-    const word = o.status === "agree" ? "also recorded rain" : "recorded little/no rain";
-    return `<div class="obs obs-${o.status}">Station ${o.station_km} km (${esc(o.station)}) ${word} (${o.obs} mm)</div>`;
-  }
+  if (!o.var || o.var === "prcp") return "";
   const word = o.status === "agree" ? "agrees" : "differs";
   return `<div class="obs obs-${o.status}">Station ${o.station_km} km: observed ${o.obs}°C vs ERA5 ${o.era5}°C — ${word}</div>`;
 }
 
-function observedSentence(event) {
-  const o = event.observed;
-  if (!o || !o.var) return "";
-  if (o.var === "prcp") {
-    return `The station ${o.station_km} km away (${esc(o.station)}) recorded ${o.obs} mm that day` +
-      (o.status === "agree" ? " — it did rain." : " — little or no rain, so treat this ERA5 flag with caution.");
+// a full-sentence corroboration block for the modal, or "" if none applies
+function corroborationStatement(event) {
+  const cat = event.category;
+  if (cat === "heavy_precip") {
+    const m = event.imd;
+    if (!m || m.status === "no_data")
+      return `<div class="statement">IMD's gridded rainfall archive ends in 2025, so this ${event.date.slice(0, 4)} flag can't be cross-checked against gauges yet.</div>`;
+    const agree = m.status === "agree";
+    return `<div class="statement obs-statement obs-${m.status}"><b>IMD gauge rainfall ${agree ? "confirms this" : "does not confirm this"}.</b> ` +
+      `IMD's gauge-based grid recorded ${m.rain_mm} mm at this cell that day; ERA5 estimated ${m.era5_mm} mm — ` +
+      (agree ? "both saw a heavy-rain event." : "the gauges saw little rain, so treat this ERA5 flag with caution (reanalysis rain is often misplaced at grid scale).") +
+      `</div>`;
   }
-  return `The station ${o.station_km} km away (${esc(o.station)}) observed ${o.obs}°C; ERA5 estimated ${o.era5}°C` +
-    (o.status === "agree" ? ` — within ${Math.abs(o.delta)}°C, so the estimate holds.` : ` — a ${Math.abs(o.delta)}°C gap, so treat this flag with caution.`);
+  if (cat === "rare_snow" || cat === "exceptional_snow") {
+    return `<div class="statement">No independent check is possible: this location has no nearby weather station, and no gauge or gridded <em>snow</em> product exists for India — so this flag rests on ERA5 alone.</div>`;
+  }
+  const o = event.observed;
+  if (!o || !o.var || o.var === "prcp") return "";
+  if (o.status === "no_obs")
+    return `<div class="statement">The nearest station (${o.station_km} km) has no reading for this day.</div>`;
+  const agree = o.status === "agree";
+  return `<div class="statement obs-statement obs-${o.status}"><b>Nearest weather station ${agree ? "agrees" : "differs"}.</b> ` +
+    `The station ${o.station_km} km away (${esc(o.station)}) observed ${o.obs}°C; ERA5 estimated ${o.era5}°C — ` +
+    (agree ? `within ${Math.abs(o.delta)}°C, so the estimate holds.` : `a ${Math.abs(o.delta)}°C gap, so treat this flag with caution.`) +
+    `</div>`;
 }
 
 /* ---------- trend chart ---------- */
@@ -1341,7 +1380,7 @@ function openModal(event, city) {
     <h3>${esc(cityName)}, ${fmtDate(event.date)}</h3>
     <div class="when">${event.value != null ? `${event.value} ${esc(event.unit)}` : ""} · validation: <span class="badge ${validation.cls}">${validation.label}</span></div>
     <div class="statement"><b>${esc(evidenceStatement(event))}</b> — same 5-day seasonal window across 1991–2020${event.date >= "1991" && event.date <= "2021" ? ", excluding the event's own year" : ""}.</div>
-    ${event.observed && event.observed.var ? `<div class="statement obs-statement obs-${event.observed.status}"><b>Nearest weather station${event.observed.status === "agree" ? " agrees" : event.observed.status === "disagree" ? " differs" : ""}.</b> ${observedSentence(event)}</div>` : ""}
+    ${corroborationStatement(event)}
     ${event.validation?.note ? `<div class="statement">${esc(event.validation.note)}${event.validation.evidence_url ? ` · <a href="${esc(event.validation.evidence_url)}" target="_blank" rel="noopener">evidence</a>` : ""}</div>` : ""}
     <div class="grid2">
       ${facts.map(([label, value]) => `<div class="fact"><div class="label">${esc(label)}</div><div class="val">${esc(value)}</div></div>`).join("")}

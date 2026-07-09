@@ -192,29 +192,28 @@ investigate, not necessarily an ERA5 error.
   operationally relevant standard in India and are not yet implemented;
   planned as a companion flag set.
 
-## 8a. Planned IMD dual-source layer
+## 8b. IMD gridded-rainfall cross-check (built)
 
-The single biggest credibility upgrade is a second, observation-based source
-to corroborate the reanalysis. The concrete first step:
+A second, independent, India-official rain source now corroborates the
+heavy-precipitation flags. `scripts/fetch_imd_rain.py` pulls **IMD gridded
+daily rainfall (0.25°, Pai et al. 2014)** via the `imdlib` package (free,
+direct from IMD Pune) and extracts each city's grid cell. It is gauge-
+interpolated — genuinely independent of ERA5 reanalysis — and covers all of
+India, so it checks cities with no NOAA station too. For every heavy-rain
+flag the pipeline marks whether IMD also recorded meaningful rain (≥1 mm and
+≥⅓ of ERA5's value). Only ~45% of ERA5's rain flags are IMD-confirmed — far
+below temperature's ~88% — which is the honest, expected signature of
+reanalysis rainfall being poorly located at grid scale; the UI states that
+rain flags carry more caution. Limits, all disclosed: the IMD archive ends
+2025 (2026 flags aren't yet checkable), IMD gridded rain underestimates in
+very wet regions (Western Ghats, NE) and thins after 2008, there is **no**
+IMD snow or fine-resolution temperature product, and per-station daily data
+stays gated behind the paid IMD-DSP portal. Data is free but not open-
+licensed (cite Pai et al. 2014; non-commercial reproduction restriction).
 
-- **Ingest IMD gridded daily rainfall (0.25° × 0.25°, 1901–present; Pai et al.
-  2014)** via the MIT-licensed `imdlib` Python package, which downloads
-  directly from IMD Pune (`imd.get_data('rain', y0, y1)`). It is station-
-  interpolated — methodologically independent of ERA5 — and its 0.25° (~28 km)
-  grid is a defensible match to aggregate against ERA5-Land, unlike the coarser
-  1° (~100 km) IMD temperature product (1951–present), which is phase two.
-- **Merge by aggregating ERA5-Land up to each IMD 0.25° cell** (area-average),
-  not by downscaling IMD — then flag heavy precipitation only where *both*
-  sources cross the threshold in the same direction ("agreement gate").
-- **What it buys:** it most strengthens the heavy-precipitation flag; it does
-  nothing for heat/cold (needs the 1° temperature product) and nothing for snow
-  (IMD publishes no gridded snow product — that flag stays ERA5-only).
-- **Caveats to log in the register:** IMD gridded rainfall is known to
-  underestimate in very wet regions (Western Ghats, NE India) and its network
-  thins after 2008; the data is free but not open-licensed (non-commercial
-  reproduction restriction + mandatory citation of Pai et al. 2014). Per-station
-  daily data is gated behind the paid IMD-DSP portal; NOAA GHCN-Daily carries
-  ~3,800 India-flagged stations as a free but uneven fallback.
+*Future:* if IMD's public API (`api.imd.gov.in`, access requested July 2026)
+grants station-level actuals, it would supersede this gridded layer for the
+cities it covers — plugging into the same event-level agreement slot.
 
 ## 9. References
 

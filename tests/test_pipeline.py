@@ -223,6 +223,23 @@ def test_attach_observed_no_station_is_single_source():
     assert summary["temp_events_checked"] == 0
 
 
+def test_attach_imd_rain_confirms_and_flags_caution():
+    events = [
+        {"category": "heavy_precip", "date": "2024-07-01", "value": 90.0},   # IMD 120mm -> confirms
+        {"category": "heavy_precip", "date": "2024-07-02", "value": 60.0},   # IMD 0.2mm -> caution
+        {"category": "heavy_precip", "date": "2026-01-01", "value": 40.0},   # after archive -> no_data
+        {"category": "hot_extreme",  "date": "2024-05-01", "value": 44.0},   # not a rain flag
+    ]
+    imd = {"2024-07-01": 120.0, "2024-07-02": 0.2}  # 2026 absent
+    summary = bd.attach_imd_rain(events, imd)
+    assert events[0]["imd"]["status"] == "agree"
+    assert events[1]["imd"]["status"] == "disagree"
+    assert events[2]["imd"]["status"] == "no_data"
+    assert events[3]["imd"] is None
+    assert summary["precip_events_checked"] == 2   # no_data not counted
+    assert summary["precip_events_agree"] == 1
+
+
 # --------------------------------------------------------------------------
 # standalone runner (works without pytest)
 # --------------------------------------------------------------------------

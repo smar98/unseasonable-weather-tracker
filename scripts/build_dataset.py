@@ -54,6 +54,7 @@ OUTPUT_DIR = REPO_ROOT / "public" / "data"
 VALIDATION_FILE = REPO_ROOT / "docs" / "validation-register.json"
 STATIONS_FILE = Path(__file__).resolve().parent / "stations.json"
 OBS_DIR = REPO_ROOT / "obs_cache"
+IMD_DIR = REPO_ROOT / "imd_cache"
 
 # how close ERA5's value must sit to the nearest station's observed value to
 # call the flag "observation-confirmed". Station and ~9-31 km grid cell
@@ -331,8 +332,10 @@ def build_city_dataset(
     validation: dict[str, Any],
     obs: dict[str, Any] | None = None,
     station: dict[str, Any] | None = None,
+    imd_rain: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     obs = obs or {}
+    imd_rain = imd_rain or {}
     baseline = [
         record for record in records
         if BASE_START.isoformat() <= record["date"] <= BASE_END.isoformat()
@@ -476,6 +479,7 @@ def build_city_dataset(
     ribbon = build_ribbon(tmax_pools, tmin_pools, wet_pools, snow_occurrence, snow_capable)
     events = top_events(classified, recent_end, city["id"], validation)
     observed_summary = attach_observed(events, obs, station)
+    imd_summary = attach_imd_rain(events, imd_rain)
     last_365 = [compact_day(day) for day in classified if day["date"] > (recent_end - dt.timedelta(days=365)).isoformat()]
     kpis = build_kpis(classified, recent_end, snow_capable)
 
@@ -509,6 +513,7 @@ def build_city_dataset(
         },
         "kpis": kpis,
         "observed": observed_summary,
+        "imd_rain": imd_summary,
         "annual": annual,
         "ribbon": ribbon,
         "last_365": last_365,
@@ -767,6 +772,45 @@ def attach_observed(events: list[dict[str, Any]], obs: dict, station: dict | Non
     }
 
 
+def load_imd_rain(city_id: str) -> dict[str, float]:
+    """date -> IMD gridded rainfall (mm) for the city's 0.25 deg cell."""
+    path = IMD_DIR / f"{city_id}.csv.gz"
+    if not path.exists():
+        return {}
+    import gzip as _gz, csv as _csv
+    out: dict[str, float] = {}
+    with _gz.open(path, "rt", encoding="utf-8") as handle:
+        for row in _csv.DictReader(handle):
+            if row["rain_mm"] != "":
+                out[row["date"]] = float(row["rain_mm"])
+    return out
+
+
+# how close IMD's gauge-based rainfall must be to ERA5's for a heavy-rain flag
+# to count as corroborated: IMD also saw meaningful rain of comparable order.
+IMD_MIN_MM = 1.0
+IMD_RATIO = 0.33
+
+
+def attach_imd_rain(events: list[dict[str, Any]], imd_rain: dict[str, float]) -> dict[str, Any]:
+    """Cross-check heavy-precipitation flags against IMD gridded rainfall."""
+    checked = agree = 0
+    for event in events:
+        if event["category"] != "heavy_precip":
+            event["imd"] = None
+            continue
+        v = imd_rain.get(event["date"])
+        if v is None:  # e.g. an event after the IMD archive ends
+            event["imd"] = {"status": "no_data"}
+            continue
+        era5 = event.get("value")
+        hit = v >= IMD_MIN_MM and (era5 is None or v >= IMD_RATIO * era5)
+        checked += 1
+        agree += 1 if hit else 0
+        event["imd"] = {"rain_mm": round(v, 1), "era5_mm": era5, "status": "agree" if hit else "disagree"}
+    return {"precip_events_checked": checked, "precip_events_agree": agree}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["backfill", "update"], default="update")
@@ -803,7 +847,8 @@ def main() -> int:
             records, api_elevation = refresh_city_data(city, args.mode, recent_end)
             station = stations.get(city["id"])
             obs = load_observed(city["id"]) if station else {}
-            dataset = build_city_dataset(city, records, api_elevation, recent_end, validation, obs, station)
+            imd_rain = load_imd_rain(city["id"])
+            dataset = build_city_dataset(city, records, api_elevation, recent_end, validation, obs, station, imd_rain)
             out_path = OUTPUT_DIR / "cities" / f"{city['id']}.json"
             out_path.write_text(json.dumps(dataset, separators=(",", ":")) + "\n", encoding="utf-8")
             recent_days = dataset["last_365"]
@@ -843,6 +888,7 @@ def main() -> int:
                     "recent10_warm": recent10_warm,
                     "recent10_cold": recent10_cold,
                     "observed": dataset["observed"],
+                    "imd_rain": dataset["imd_rain"],
                     "latest_flag": (
                         {"date": latest_flags["d"], "flags": latest_flags["f"]}
                         if latest_flags else None
@@ -874,11 +920,25 @@ def main() -> int:
         ),
     }
 
+    # independent rain cross-check against IMD gridded gauge data (all-India,
+    # so it also covers cities that have no NOAA station)
+    imd_summary = {
+        "cities_with_rain": sum(1 for e in index_entries if e["imd_rain"]["precip_events_checked"] > 0),
+        "precip_events_checked": sum(e["imd_rain"]["precip_events_checked"] for e in index_entries),
+        "precip_events_agree": sum(e["imd_rain"]["precip_events_agree"] for e in index_entries),
+        "note": (
+            "Heavy-rain flags cross-checked against IMD gridded daily rainfall (0.25 deg, "
+            "Pai et al. 2014, gauge-based and independent of ERA5). Archive ends 2025, so 2026 "
+            "flags are not yet checkable; IMD publishes no snow or temperature-at-this-resolution product."
+        ),
+    }
+
     index = {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         "validation_summary": validation_summary,
         "observed_summary": observed_summary,
+        "imd_rain_summary": imd_summary,
         "model": MODEL,
         "model_note": (
             "ERA5-Land (~9 km) blended with ERA5 (~31 km) via Open-Meteo era5_seamless; "
