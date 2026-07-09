@@ -437,6 +437,15 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 .event-headline { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.4; color: var(--charcoal); }
 .event-meta { font-size: 12px; color: var(--slate); }
 
+/* observed cross-check ("actuals") */
+.obs { font-size: 11.5px; line-height: 1.35; padding-top: 2px; }
+.obs-agree { color: var(--brand); }
+.obs-disagree { color: var(--terracotta); }
+.obs-none { color: var(--mist); }
+.obs-statement.obs-agree { border-left: 3px solid var(--brand); background: var(--tint-precip); border-radius: 0 8px 8px 0; padding: 10px 14px; }
+.obs-statement.obs-disagree { border-left: 3px solid var(--terracotta); background: var(--tint-heat); border-radius: 0 8px 8px 0; padding: 10px 14px; }
+.obs-statement { font-size: 13px; }
+
 /* ---- "full record" divider + demoted cards ------------------------------ */
 
 .detail-divider {

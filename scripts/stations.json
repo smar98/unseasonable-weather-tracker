@@ -1,0 +1,310 @@
+{
+  "akola": {
+    "station_id": "42933",
+    "name": "Akola",
+    "distance_km": 3.8,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-11"
+  },
+  "anand": null,
+  "bardhaman": null,
+  "bathinda": null,
+  "erode": null,
+  "gorakhpur": {
+    "station_id": "42379",
+    "name": "Gorakhpur",
+    "distance_km": 1.8,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "guntur": null,
+  "hisar": {
+    "station_id": "42131",
+    "name": "Hissar",
+    "distance_km": 1.7,
+    "daily_start": "1914-05-22",
+    "daily_end": "2025-08-13"
+  },
+  "indore": {
+    "station_id": "42754",
+    "name": "Indore",
+    "distance_km": 3.4,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "karnal": null,
+  "kolhapur": {
+    "station_id": "43157",
+    "name": "Kolhapur",
+    "distance_km": 0.5,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "kota": {
+    "station_id": "42452",
+    "name": "Kota Aerodrome",
+    "distance_km": 3.8,
+    "daily_start": "1961-07-01",
+    "daily_end": "2025-08-24"
+  },
+  "ludhiana": {
+    "station_id": "42099",
+    "name": "Ludhiana",
+    "distance_km": 9.1,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "mandya": null,
+  "meerut": null,
+  "muzaffarpur": null,
+  "nashik": null,
+  "rajkot": {
+    "station_id": "42737",
+    "name": "Rajkot",
+    "distance_km": 1.4,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "sambalpur": {
+    "station_id": "42883",
+    "name": "Sambalpur",
+    "distance_km": 0.9,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-25"
+  },
+  "sri-ganganagar": {
+    "station_id": "42123",
+    "name": "Ganganagar",
+    "distance_km": 4.0,
+    "daily_start": "1951-01-01",
+    "daily_end": "2025-08-16"
+  },
+  "thanjavur": null,
+  "warangal": null,
+  "bengaluru": {
+    "station_id": "43295",
+    "name": "Bangalore",
+    "distance_km": 1.3,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-04"
+  },
+  "bhopal": {
+    "station_id": "42667",
+    "name": "Bhopal / Bairagarh",
+    "distance_km": 6.3,
+    "daily_start": "1951-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "hyderabad": {
+    "station_id": "43128",
+    "name": "Hyderabad Airport",
+    "distance_km": 7.4,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-11-25"
+  },
+  "nagpur": {
+    "station_id": "42867",
+    "name": "Nagpur Sonegaon",
+    "distance_km": 6.3,
+    "daily_start": "1943-01-01",
+    "daily_end": "2027-12-21"
+  },
+  "pune": {
+    "station_id": "43063",
+    "name": "Poona",
+    "distance_km": 1.6,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-08"
+  },
+  "raipur": null,
+  "bhubaneswar": {
+    "station_id": "42971",
+    "name": "Bhubaneswar",
+    "distance_km": 2.5,
+    "daily_start": "1918-04-01",
+    "daily_end": "2027-12-25"
+  },
+  "chennai": {
+    "station_id": "43279",
+    "name": "Madras / Minambakkam",
+    "distance_km": 14.2,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-27"
+  },
+  "kolkata": {
+    "station_id": "42807",
+    "name": "Calcutta / Alipore",
+    "distance_km": 4.5,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-21"
+  },
+  "ranchi": {
+    "station_id": "42701",
+    "name": "M. O. Ranchi",
+    "distance_km": 3.0,
+    "daily_start": "1956-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "visakhapatnam": {
+    "station_id": "43149",
+    "name": "Vishakhapatnam",
+    "distance_km": 5.3,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-26"
+  },
+  "darjeeling": null,
+  "gangtok": null,
+  "port-blair": {
+    "station_id": "43333",
+    "name": "Port Blair",
+    "distance_km": 3.2,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-30"
+  },
+  "amritsar": {
+    "station_id": "42071",
+    "name": "Amritsar",
+    "distance_km": 1.5,
+    "daily_start": "1973-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "chandigarh": {
+    "station_id": "42105",
+    "name": "Chandigarh / S?rajpur",
+    "distance_km": 9.1,
+    "daily_start": "1954-01-08",
+    "daily_end": "2025-08-22"
+  },
+  "jaipur": {
+    "station_id": "42348",
+    "name": "Jaipur / Sanganer",
+    "distance_km": 11.5,
+    "daily_start": "1957-07-01",
+    "daily_end": "2025-08-23"
+  },
+  "lucknow": {
+    "station_id": "42369",
+    "name": "Lucknow / Amausi",
+    "distance_km": 10.7,
+    "daily_start": "1951-01-01",
+    "daily_end": "2025-08-23"
+  },
+  "new-delhi": {
+    "station_id": "42182",
+    "name": "New Delhi / Safdarjung",
+    "distance_km": 4.5,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "patna": {
+    "station_id": "42492",
+    "name": "Patna",
+    "distance_km": 3.6,
+    "daily_start": "1946-05-01",
+    "daily_end": "2025-08-24"
+  },
+  "varanasi": {
+    "station_id": "42483",
+    "name": "Varanasi",
+    "distance_km": 2.0,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-20"
+  },
+  "cherrapunji": {
+    "station_id": "42515",
+    "name": "Cherrapunji",
+    "distance_km": 6.8,
+    "daily_start": "1902-06-01",
+    "daily_end": "2025-08-24"
+  },
+  "guwahati": {
+    "station_id": "42410",
+    "name": "Gauhati",
+    "distance_km": 18.7,
+    "daily_start": "1945-03-20",
+    "daily_end": "2025-05-27"
+  },
+  "shillong": {
+    "station_id": "42516",
+    "name": "Shillong",
+    "distance_km": 0.2,
+    "daily_start": "1902-06-12",
+    "daily_end": "2025-08-23"
+  },
+  "madurai": {
+    "station_id": "43360",
+    "name": "Madurai",
+    "distance_km": 10.3,
+    "daily_start": "1958-10-17",
+    "daily_end": "2027-12-21"
+  },
+  "jaisalmer": {
+    "station_id": "42328",
+    "name": "Jaisalmer",
+    "distance_km": 2.3,
+    "daily_start": "1949-01-01",
+    "daily_end": "2025-08-20"
+  },
+  "jodhpur": {
+    "station_id": "42339",
+    "name": "Jodhpur",
+    "distance_km": 3.7,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-17"
+  },
+  "ahmedabad": {
+    "station_id": "42647",
+    "name": "Ahmadabad",
+    "distance_km": 6.5,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "kochi": null,
+  "mumbai": {
+    "station_id": "43003",
+    "name": "Bombay / Santacruz",
+    "distance_km": 6.0,
+    "daily_start": "1949-10-01",
+    "daily_end": "2027-12-10"
+  },
+  "panaji": {
+    "station_id": "43192",
+    "name": "Goa / Panjim",
+    "distance_km": 1.7,
+    "daily_start": "1973-01-01",
+    "daily_end": "2027-12-30"
+  },
+  "thiruvananthapuram": {
+    "station_id": "43371",
+    "name": "Thiruvananthapuram",
+    "distance_km": 0.3,
+    "daily_start": "1901-01-01",
+    "daily_end": "2027-12-30"
+  },
+  "dehradun": {
+    "station_id": "42111",
+    "name": "Dehradun",
+    "distance_km": 0.9,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-24"
+  },
+  "gulmarg": null,
+  "joshimath": null,
+  "leh": null,
+  "manali": null,
+  "shimla": {
+    "station_id": "42083",
+    "name": "Shimla",
+    "distance_km": 0.8,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-23"
+  },
+  "sonamarg": null,
+  "srinagar": {
+    "station_id": "42027",
+    "name": "Srinagar",
+    "distance_km": 3.3,
+    "daily_start": "1901-01-01",
+    "daily_end": "2025-08-20"
+  }
+}

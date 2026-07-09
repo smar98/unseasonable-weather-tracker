@@ -461,10 +461,18 @@ function renderNational() {
   const rows = [
     `<p class="national-verdict">In the last week of data, <b>${flaggedWeek.length} of ${cities.length}</b> cities logged at least one day outside their seasonal normal.${topClause}</p>`,
   ];
+  const os = state.index.observed_summary;
+  if (os && os.temp_events_checked > 0) {
+    const pct = Math.round((os.temp_events_agree / os.temp_events_checked) * 100);
+    rows.push(
+      `<div class="row"><span>ERA5 vs nearest weather station, recent heat/cold flags</span><b>${pct}% match</b></div>`,
+      `<div class="row"><span style="color:var(--slate)">${os.temp_events_agree} of ${os.temp_events_checked} within ${os.tolerance_c}°C, across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km</span></div>`
+    );
+  }
   const vs = state.index.validation_summary;
   if (vs && vs.checked > 0) {
     rows.push(
-      `<div class="row"><span>Flags checked against independent evidence</span><b>${vs.checked}</b></div>`,
+      `<div class="row"><span>Flags also hand-checked against news/IMD</span><b>${vs.checked}</b></div>`,
       `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} no public record · ${vs.contradicted} contradicted</span></div>`
     );
   }
@@ -855,12 +863,39 @@ function renderTopEvents(city) {
         </div>
         <p class="event-headline">${esc(evidenceStatement(event))}.</p>
         <div class="event-meta">${fmtDate(event.date)} · ${event.value != null ? event.value : "–"} ${esc(event.unit)}</div>
+        ${observedLine(event)}
       </button>`;
     })
     .join("");
   node.querySelectorAll("button[data-top]").forEach((btn) =>
     btn.addEventListener("click", () => openModal(top[Number(btn.dataset.top)], city))
   );
+}
+
+// observed cross-check line for an event card / modal (the "actuals" layer)
+function observedLine(event) {
+  const o = event.observed;
+  if (!o) return ""; // snow, or category with no station variable
+  if (o.status === "no_obs") {
+    return `<div class="obs obs-none">Nearest station ${o.station_km} km · no reading that day</div>`;
+  }
+  if (o.var === "prcp") {
+    const word = o.status === "agree" ? "also recorded rain" : "recorded little/no rain";
+    return `<div class="obs obs-${o.status}">Station ${o.station_km} km (${esc(o.station)}) ${word} (${o.obs} mm)</div>`;
+  }
+  const word = o.status === "agree" ? "agrees" : "differs";
+  return `<div class="obs obs-${o.status}">Station ${o.station_km} km: observed ${o.obs}°C vs ERA5 ${o.era5}°C — ${word}</div>`;
+}
+
+function observedSentence(event) {
+  const o = event.observed;
+  if (!o || !o.var) return "";
+  if (o.var === "prcp") {
+    return `The station ${o.station_km} km away (${esc(o.station)}) recorded ${o.obs} mm that day` +
+      (o.status === "agree" ? " — it did rain." : " — little or no rain, so treat this ERA5 flag with caution.");
+  }
+  return `The station ${o.station_km} km away (${esc(o.station)}) observed ${o.obs}°C; ERA5 estimated ${o.era5}°C` +
+    (o.status === "agree" ? ` — within ${Math.abs(o.delta)}°C, so the estimate holds.` : ` — a ${Math.abs(o.delta)}°C gap, so treat this flag with caution.`);
 }
 
 /* ---------- trend chart ---------- */
@@ -1306,6 +1341,7 @@ function openModal(event, city) {
     <h3>${esc(cityName)}, ${fmtDate(event.date)}</h3>
     <div class="when">${event.value != null ? `${event.value} ${esc(event.unit)}` : ""} · validation: <span class="badge ${validation.cls}">${validation.label}</span></div>
     <div class="statement"><b>${esc(evidenceStatement(event))}</b> — same 5-day seasonal window across 1991–2020${event.date >= "1991" && event.date <= "2021" ? ", excluding the event's own year" : ""}.</div>
+    ${event.observed && event.observed.var ? `<div class="statement obs-statement obs-${event.observed.status}"><b>Nearest weather station${event.observed.status === "agree" ? " agrees" : event.observed.status === "disagree" ? " differs" : ""}.</b> ${observedSentence(event)}</div>` : ""}
     ${event.validation?.note ? `<div class="statement">${esc(event.validation.note)}${event.validation.evidence_url ? ` · <a href="${esc(event.validation.evidence_url)}" target="_blank" rel="noopener">evidence</a>` : ""}</div>` : ""}
     <div class="grid2">
       ${facts.map(([label, value]) => `<div class="fact"><div class="label">${esc(label)}</div><div class="val">${esc(value)}</div></div>`).join("")}

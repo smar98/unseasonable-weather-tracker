@@ -16,11 +16,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Update data (incremental)
+      - name: Install dependencies
+        run: pip install meteostat pandas
+      - name: Refresh observed station data (NOAA ISD/GHCN via Meteostat)
+        run: python scripts/fetch_observed.py
+        continue-on-error: true # observed layer is corroboration; never block the ERA5 refresh
+      - name: Update ERA5 data + rebuild (incremental)
         run: python scripts/build_dataset.py --mode update
       - name: Commit changed dataset
         run: |
-          git add data_cache public/data
+          git add data_cache obs_cache public/data
           if git diff --cached --quiet; then
             echo "No dataset changes"
             exit 0

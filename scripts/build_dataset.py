@@ -52,6 +52,15 @@ CITIES_FILE = Path(__file__).resolve().parent / "cities.json"
 CACHE_DIR = REPO_ROOT / "data_cache"
 OUTPUT_DIR = REPO_ROOT / "public" / "data"
 VALIDATION_FILE = REPO_ROOT / "docs" / "validation-register.json"
+STATIONS_FILE = Path(__file__).resolve().parent / "stations.json"
+OBS_DIR = REPO_ROOT / "obs_cache"
+
+# how close ERA5's value must sit to the nearest station's observed value to
+# call the flag "observation-confirmed". Station and ~9-31 km grid cell
+# legitimately differ by a few degrees, so this is a tolerance on the value,
+# not an exact match — the test is "did ERA5 get the day about right?"
+OBS_TEMP_TOL_C = 3.0
+OBS_WET_MM = 1.0
 
 API_URL = "https://archive-api.open-meteo.com/v1/archive"
 MODEL = "era5_seamless"
@@ -320,7 +329,10 @@ def build_city_dataset(
     api_elevation: float | None,
     recent_end: dt.date,
     validation: dict[str, Any],
+    obs: dict[str, Any] | None = None,
+    station: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    obs = obs or {}
     baseline = [
         record for record in records
         if BASE_START.isoformat() <= record["date"] <= BASE_END.isoformat()
@@ -463,6 +475,7 @@ def build_city_dataset(
     annual = summarize_annual(classified, snow_capable)
     ribbon = build_ribbon(tmax_pools, tmin_pools, wet_pools, snow_occurrence, snow_capable)
     events = top_events(classified, recent_end, city["id"], validation)
+    observed_summary = attach_observed(events, obs, station)
     last_365 = [compact_day(day) for day in classified if day["date"] > (recent_end - dt.timedelta(days=365)).isoformat()]
     kpis = build_kpis(classified, recent_end, snow_capable)
 
@@ -495,6 +508,7 @@ def build_city_dataset(
             "note": "Expected exceedance fractions if the climate matched the 1991-2020 baseline. Counts above these are the anomaly signal; counts near them are the base rate.",
         },
         "kpis": kpis,
+        "observed": observed_summary,
         "annual": annual,
         "ribbon": ribbon,
         "last_365": last_365,
@@ -681,6 +695,78 @@ def load_validation() -> dict[str, Any]:
     return {}
 
 
+def load_stations() -> dict[str, Any]:
+    if STATIONS_FILE.exists():
+        return json.loads(STATIONS_FILE.read_text(encoding="utf-8"))
+    return {}
+
+
+def load_observed(city_id: str) -> dict[str, dict[str, float | None]]:
+    """date -> {tmax, tmin, prcp} from the observed-station cache."""
+    path = OBS_DIR / f"{city_id}.csv.gz"
+    if not path.exists():
+        return {}
+    out: dict[str, dict[str, float | None]] = {}
+    import gzip as _gz, csv as _csv
+    with _gz.open(path, "rt", encoding="utf-8") as handle:
+        for row in _csv.DictReader(handle):
+            out[row["date"]] = {
+                "tmax": float(row["tmax"]) if row["tmax"] else None,
+                "tmin": float(row["tmin"]) if row["tmin"] else None,
+                "prcp": float(row["prcp"]) if row["prcp"] else None,
+            }
+    return out
+
+
+# which observed variable each flag is checked against
+_OBS_VAR = {
+    "hot_extreme": "tmax", "warm_day": "tmax",
+    "cold_extreme": "tmin", "cold_night": "tmin",
+    "heavy_precip": "prcp",
+}
+
+
+def attach_observed(events: list[dict[str, Any]], obs: dict, station: dict | None) -> dict[str, Any]:
+    """Tag each event with the nearest station's observed value and whether
+    ERA5 agrees. Returns a per-city summary of the temperature agreement rate."""
+    checked = agree = 0
+    for event in events:
+        var = _OBS_VAR.get(event["category"])
+        if station is None or var is None:
+            event["observed"] = None  # snow, or no local station
+            continue
+        obs_day = obs.get(event["date"])
+        obs_val = obs_day.get(var) if obs_day else None
+        era5_val = event.get("value")
+        if obs_val is None or era5_val is None:
+            event["observed"] = {"station_km": station["distance_km"], "station": station["name"], "status": "no_obs"}
+            continue
+        entry = {
+            "station_km": station["distance_km"],
+            "station": station["name"],
+            "var": var,
+            "era5": era5_val,
+            "obs": round(obs_val, 1),
+        }
+        if var == "prcp":
+            # precip magnitude is noisy; check only that the station also saw rain
+            entry["status"] = "agree" if obs_val >= OBS_WET_MM else "disagree"
+        else:
+            entry["delta"] = round(era5_val - obs_val, 1)
+            hit = abs(era5_val - obs_val) <= OBS_TEMP_TOL_C
+            entry["status"] = "agree" if hit else "disagree"
+            checked += 1
+            agree += 1 if hit else 0
+        event["observed"] = entry
+    return {
+        "has_station": station is not None,
+        "station": station["name"] if station else None,
+        "station_km": station["distance_km"] if station else None,
+        "temp_events_checked": checked,
+        "temp_events_agree": agree,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["backfill", "update"], default="update")
@@ -704,6 +790,7 @@ def main() -> int:
         else dt.date.today() - dt.timedelta(days=RECENT_LAG_DAYS)
     )
     validation = load_validation()
+    stations = load_stations()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "cities").mkdir(parents=True, exist_ok=True)
@@ -714,7 +801,9 @@ def main() -> int:
         print(f"Processing {city['name']}", file=sys.stderr)
         try:
             records, api_elevation = refresh_city_data(city, args.mode, recent_end)
-            dataset = build_city_dataset(city, records, api_elevation, recent_end, validation)
+            station = stations.get(city["id"])
+            obs = load_observed(city["id"]) if station else {}
+            dataset = build_city_dataset(city, records, api_elevation, recent_end, validation, obs, station)
             out_path = OUTPUT_DIR / "cities" / f"{city['id']}.json"
             out_path.write_text(json.dumps(dataset, separators=(",", ":")) + "\n", encoding="utf-8")
             recent_days = dataset["last_365"]
@@ -753,6 +842,7 @@ def main() -> int:
                     "flags_30d": flags_30d,
                     "recent10_warm": recent10_warm,
                     "recent10_cold": recent10_cold,
+                    "observed": dataset["observed"],
                     "latest_flag": (
                         {"date": latest_flags["d"], "flags": latest_flags["f"]}
                         if latest_flags else None
@@ -770,10 +860,25 @@ def main() -> int:
             validation_summary["checked"] += 1
             validation_summary[status] += 1
 
+    # automatic observed cross-check: how well ERA5 matched the nearest station
+    observed_summary = {
+        "cities_with_station": sum(1 for e in index_entries if e["observed"]["has_station"]),
+        "cities_total": len(index_entries),
+        "temp_events_checked": sum(e["observed"]["temp_events_checked"] for e in index_entries),
+        "temp_events_agree": sum(e["observed"]["temp_events_agree"] for e in index_entries),
+        "tolerance_c": OBS_TEMP_TOL_C,
+        "note": (
+            "Independent check: for each recent temperature flag with a station within 35 km, "
+            "whether ERA5's value sits within the tolerance of the observed value (NOAA ISD/GHCN "
+            "via Meteostat). Snow and the high Himalaya have no nearby station and stay single-source."
+        ),
+    }
+
     index = {
         "schema_version": SCHEMA_VERSION,
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         "validation_summary": validation_summary,
+        "observed_summary": observed_summary,
         "model": MODEL,
         "model_note": (
             "ERA5-Land (~9 km) blended with ERA5 (~31 km) via Open-Meteo era5_seamless; "

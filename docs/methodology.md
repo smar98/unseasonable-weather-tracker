@@ -159,6 +159,24 @@ contradicted**. Register entries link evidence. Contradicted flags are kept
 visible: the register doubles as the tool's published false-positive log, and
 the hit rate of a validated sample is reported rather than implied.
 
+### 7a. Automatic observed cross-check (the "actuals" layer)
+
+Manual validation is a spot-check; it cannot cover every flag, because minor
+real anomalies leave no public record. The systematic check is an independent
+observational dataset. For each city with a genuine local station (≤35 km),
+`scripts/fetch_observed.py` pulls **observed daily station data — NOAA ISD /
+GHCN-Daily via the Meteostat library** (free, CC-BY; the same data Meteostat
+wraps). For every recent temperature flag, the pipeline compares ERA5's value
+against the station's observed value and marks the flag **agree** (within
+±3 °C — a tolerance, because a station and a ~9–31 km grid cell legitimately
+differ by a few degrees) or **differs**. Precipitation is checked only as
+wet/dry corroboration (station gauges are noisier and sparser). This runs on
+every refresh and covers 41 of 62 cities; the rest — the high Himalaya (no
+station) and snow (no observational product anywhere) — stay single-source
+and are labelled as such. Station observations are true point measurements;
+ERA5 is a grid-cell estimate, so a "differs" flags a real divergence to
+investigate, not necessarily an ERA5 error.
+
 ## 8. Known limitations
 
 - ERA5/ERA5-Land precipitation and snowfall in complex Himalayan terrain carry
