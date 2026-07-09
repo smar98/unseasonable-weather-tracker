@@ -81,12 +81,14 @@ rank position; the sensitivity annex quantifies it.
 
 ## 5. Flag definitions (exact)
 
+The four temperature flags complete the ETCCDI 2×2 (warm/cold × day/night):
+
 | Flag | Condition | ETCCDI relative |
 |---|---|---|
-| `warm_day` | tmax percentile > 0.90 | TX90p building block |
-| `hot_extreme` | tmax percentile > 0.95 | stricter TX90p variant |
-| `cold_night` | tmin percentile < 0.10 | TN10p building block |
-| `cold_extreme` | tmin percentile < 0.05 | stricter TN10p variant |
+| `warm_day` / `hot_extreme` | daily **max** percentile > 0.90 / > 0.95 | TX90p |
+| `cold_day` / `cold_day_extreme` | daily **max** percentile < 0.10 / < 0.05 | TX10p |
+| `warm_night` / `warm_night_extreme` | daily **min** percentile > 0.90 / > 0.95 | TN90p |
+| `cold_night` / `cold_extreme` | daily **min** percentile < 0.10 / < 0.05 | TN10p |
 | `heavy_precip` | wet day (≥1 mm) AND wet-day percentile > 0.95 AND wet-day pool ≥ 15 | seasonal analogue of R95p |
 | `rare_snow` | snowfall ≥ 1 cm AND baseline probability of a ≥1 cm snow day in the seasonal window ≤ 5% | none (novel, documented) |
 | `exceptional_snow` | snowfall ≥ 1 cm AND amount percentile among baseline seasonal snow days > 0.95 AND snow-day pool ≥ 15 | none (novel, documented) |
@@ -165,17 +167,18 @@ Manual validation is a spot-check; it cannot cover every flag, because minor
 real anomalies leave no public record. The systematic check is an independent
 observational dataset. For each city with a genuine local station (≤35 km),
 `scripts/fetch_observed.py` pulls **observed daily station data — NOAA ISD /
-GHCN-Daily via the Meteostat library** (free, CC-BY; the same data Meteostat
-wraps). For every recent temperature flag, the pipeline compares ERA5's value
-against the station's observed value and marks the flag **agree** (within
-±3 °C — a tolerance, because a station and a ~9–31 km grid cell legitimately
-differ by a few degrees) or **differs**. Precipitation is checked only as
-wet/dry corroboration (station gauges are noisier and sparser). This runs on
-every refresh and covers 41 of 62 cities; the rest — the high Himalaya (no
-station) and snow (no observational product anywhere) — stay single-source
-and are labelled as such. Station observations are true point measurements;
-ERA5 is a grid-cell estimate, so a "differs" flags a real divergence to
-investigate, not necessarily an ERA5 error.
+GHCN-Daily via the Meteostat library** (free, CC-BY). Agreement is measured
+across **every overlapping day since 2010**, not just flagged events, so the
+number is unbiased: a day counts as a match when ERA5's max and min both sit
+within ±3 °C of the station's (a tolerance, because a station and a ~9–31 km
+grid cell legitimately differ by a few degrees). Current result: **≈77% of
+~132,000 city-days** across the 41 cities with a station. Individual flags
+(all four temperature types) also carry a per-event agree/differs badge. The
+21 remaining cities — the high Himalaya (no station) and snow (no
+observational product anywhere) — stay single-source and are labelled.
+A "differs" flags a real divergence to investigate, not necessarily an ERA5
+error. Caveat: ERA5 is weakest on warm nights (it smears the urban heat
+island), so its warm-night agreement runs below its daytime agreement.
 
 ## 8. Known limitations
 
@@ -201,10 +204,13 @@ direct from IMD Pune) and extracts each city's grid cell. It is gauge-
 interpolated — genuinely independent of ERA5 reanalysis — and covers all of
 India, so it checks cities with no NOAA station too. For every heavy-rain
 flag the pipeline marks whether IMD also recorded meaningful rain (≥1 mm and
-≥⅓ of ERA5's value). Only ~45% of ERA5's rain flags are IMD-confirmed — far
-below temperature's ~88% — which is the honest, expected signature of
-reanalysis rainfall being poorly located at grid scale; the UI states that
-rain flags carry more caution. Limits, all disclosed: the IMD archive ends
+≥⅓ of ERA5's value) within **±1 day** — the window absorbs the mismatch
+between IMD's 0830–0830 IST accumulation boundary and ERA5's daily boundary,
+which otherwise scores a downpour landing on adjacent calendar dates as a
+false "disagree" (exact-date match gives ~50%; the ±1-day figure is ~74%
+across all ERA5 heavy-rain flags). Rain still confirms less often than
+temperature because reanalysis rainfall is genuinely harder to place at grid
+scale; the UI states that rain flags carry more caution. Limits, all disclosed: the IMD archive ends
 2025 (2026 flags aren't yet checkable), IMD gridded rain underestimates in
 very wet regions (Western Ghats, NE) and thins after 2008, there is **no**
 IMD snow or fine-resolution temperature product, and per-station daily data

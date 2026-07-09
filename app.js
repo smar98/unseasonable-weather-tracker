@@ -27,13 +27,17 @@ const COLORS = {
    day "extreme heat" (it cleared the local summer p95) reads as absurd and
    discredits the tool; "unusually warm for the season" is what it means. */
 const FLAG_META = {
-  hot_extreme: { label: "Unusually warm", cls: "heat", color: COLORS.heat, rank: 0 },
-  cold_extreme: { label: "Unusually cold", cls: "cold", color: COLORS.cold, rank: 1 },
-  rare_snow: { label: "Rare-season snow", cls: "snow", color: COLORS.snow, rank: 2 },
-  exceptional_snow: { label: "Exceptional snowfall", cls: "snow", color: COLORS.snow, rank: 3 },
-  heavy_precip: { label: "Unusually wet", cls: "precip", color: COLORS.precip, rank: 4 },
-  warm_day: { label: "Warm day", cls: "heat", color: COLORS.heat, rank: 5 },
-  cold_night: { label: "Cold night", cls: "cold", color: COLORS.cold, rank: 6 },
+  hot_extreme: { label: "Unusually warm day", cls: "heat", color: COLORS.heat, rank: 0 },
+  cold_extreme: { label: "Unusually cold night", cls: "cold", color: COLORS.cold, rank: 1 },
+  warm_night_extreme: { label: "Unusually warm night", cls: "heat", color: COLORS.heat, rank: 2 },
+  cold_day_extreme: { label: "Unusually cold day", cls: "cold", color: COLORS.cold, rank: 3 },
+  rare_snow: { label: "Rare-season snow", cls: "snow", color: COLORS.snow, rank: 4 },
+  exceptional_snow: { label: "Exceptional snowfall", cls: "snow", color: COLORS.snow, rank: 5 },
+  heavy_precip: { label: "Unusually wet", cls: "precip", color: COLORS.precip, rank: 6 },
+  warm_day: { label: "Warm day", cls: "heat", color: COLORS.heat, rank: 7 },
+  cold_night: { label: "Cold night", cls: "cold", color: COLORS.cold, rank: 8 },
+  warm_night: { label: "Warm night", cls: "heat", color: COLORS.heat, rank: 9 },
+  cold_day: { label: "Cold day", cls: "cold", color: COLORS.cold, rank: 10 },
 };
 
 const VALIDATION_META = {
@@ -120,18 +124,31 @@ function mean(values) {
 
 /* ---------- plain-language "so-what" generation ----------
    Every takeaway is a deterministic template with numeric cutoffs, so it is
-   auditable and fails predictably. Statistical anchor: warm-day count over
-   365d is ~Binomial(365, 0.10), sigma ~= 5.7, so +/-9 days ~= 1.5 sigma is a
-   defensible "notable" threshold. The sign of every gap drives the wording:
-   BELOW expected means calmer-than-normal, never "alarming". */
+   auditable and fails predictably. The sign of every gap drives the wording:
+   BELOW expected means calmer-than-normal, never "alarming".
+   Note on thresholds: a naive Binomial(365, 0.10) gives sigma ~= 5.7, but
+   flagged days cluster (heat waves span several days), so the true spread of
+   the annual count is larger. These cutoffs are deliberately conservative
+   "notable" bars, not significance tests; we never claim a sigma level. */
 
-const NOTABLE_TEMP = 9;   // warm/cold day count departure (~1.5 sigma)
-const NOTABLE_PRECIP = 4; // heavy-rain day departure
+const NOTABLE_TEMP = 9;        // single warm/cold-day-count departure (KPI tiles)
+const NOTABLE_COMPOSITE = 16;  // warm-direction or cold-direction sum (two indices) for the verdict
+const NOTABLE_PRECIP = 4;      // heavy-rain day departure
+
+// warm-direction excess = warm days + warm nights above expected;
+// cold-direction = cold nights + cold days above expected. Folding nights in
+// (TN90p/TX10p) means the verdict reflects all four corners, not half of tmin.
+function warmColdExcess(k) {
+  const we = ((k.warm_days ?? 0) - (k.warm_days_expected ?? 0)) +
+             ((k.warm_nights ?? 0) - (k.warm_nights_expected ?? 0));
+  const ce = ((k.cold_nights ?? 0) - (k.cold_nights_expected ?? 0)) +
+             ((k.cold_days ?? 0) - (k.cold_days_expected ?? 0));
+  return [we, ce];
+}
 
 function cityStats(city) {
   const k = city.kpis;
-  const warmExcess = (k.warm_days ?? 0) - (k.warm_days_expected ?? 0);
-  const coldExcess = (k.cold_nights ?? 0) - (k.cold_nights_expected ?? 0);
+  const [warmExcess, coldExcess] = warmColdExcess(k);
   const qual = city.annual.filter((a) => a.coverage_days >= 350 && a.warm_day_fraction != null);
   const last10 = qual.slice(-10);
   const recentWarm = last10.length >= 8 ? mean(last10.map((a) => a.warm_day_fraction)) : null;
@@ -141,23 +158,22 @@ function cityStats(city) {
   return { k, warmExcess, coldExcess, recentWarm, recentCold, recentAnom, snowDays };
 }
 
-// tone drives the banner tint, the KPI colours and the map dots. Works off
-// the same kpis object present in both index entries and city files.
+// tone drives the banner tint, the KPI colours and the map dots, from the
+// warm/cold composite. Works off the kpis object in index entries and files.
 function cityTone(kpis) {
-  const we = (kpis.warm_days ?? 0) - (kpis.warm_days_expected ?? 0);
-  const ce = (kpis.cold_nights ?? 0) - (kpis.cold_nights_expected ?? 0);
-  if (we >= NOTABLE_TEMP && ce >= NOTABLE_TEMP) return "swing";
-  if (we >= NOTABLE_TEMP) return "warm";
-  if (ce >= NOTABLE_TEMP) return "cool";
-  if (we <= -NOTABLE_TEMP && ce <= -NOTABLE_TEMP) return "calm";
+  const [we, ce] = warmColdExcess(kpis);
+  if (we >= NOTABLE_COMPOSITE && ce >= NOTABLE_COMPOSITE) return "swing";
+  if (we >= NOTABLE_COMPOSITE && we >= ce) return "warm";
+  if (ce >= NOTABLE_COMPOSITE && ce > we) return "cool";
+  if (we <= -NOTABLE_COMPOSITE && ce <= -NOTABLE_COMPOSITE) return "calm";
   return "neutral";
 }
 
 const TONE_HEADLINE = {
-  swing: "has been swinging between unusual heat and unusual cold",
+  swing: "has swung between unusual heat and unusual cold",
   warm: "has been running warmer than its seasonal normal",
   cool: "has been running cooler than its seasonal normal",
-  calm: "has been quieter than its seasonal normal",
+  calm: "had fewer unusual days than a typical year",
   neutral: "has stayed close to its seasonal normal",
 };
 
@@ -165,10 +181,12 @@ function cityVerdict(city) {
   const s = cityStats(city);
   const tone = cityTone(city.kpis);
   const headline = TONE_HEADLINE[tone];
+  const exp = s.k.warm_days_expected;
 
   const counts =
-    `${s.k.warm_days} warm days against about ${s.k.warm_days_expected} expected, ` +
-    `and ${s.k.cold_nights} cold nights against about ${s.k.cold_nights_expected}, over the past year`;
+    `${s.k.warm_days} warm days, ${s.k.warm_nights} warm nights, ` +
+    `${s.k.cold_days} cold days and ${s.k.cold_nights} cold nights ` +
+    `against about ${exp} expected for each, over the past year`;
 
   let trend = "";
   if (s.recentWarm != null) {
@@ -211,25 +229,26 @@ function kpiMeaning(count, expected, concernClass, threshold) {
   return { gap: `about the ~${expected} expected`, cls: "calm", tag: "near normal" };
 }
 
-// temperature KPIs need the city's tone: fewer cold nights is a WARM-direction
-// signal in a warming city, not a "quiet" one — only both-ends-down (calm) is
-// genuinely quiet. Colour reflects climate direction, not just the raw sign.
-function tempMeaning(kind, count, expected, tone, threshold) {
+// A temperature KPI, coloured by CLIMATE DIRECTION not raw sign. `dir` is the
+// warming direction of "more of this": warm days & warm nights are "warm";
+// cold nights & cold days are "cold". More warm-dir OR fewer cold-dir both mean
+// warming; only both-ends-down (calm tone) is genuinely quiet.
+function tempMeaning(dir, count, expected, tone, threshold) {
   if (expected == null) return { gap: "", cls: "calm", tag: "" };
   const diff = count - expected;
   const more = `${diff} more than the ~${expected} expected`;
   const fewer = `${Math.abs(diff)} fewer than the ~${expected} expected`;
   if (Math.abs(diff) < threshold) return { gap: `about the ~${expected} expected`, cls: "calm", tag: "near normal" };
-  if (kind === "warm") {
-    if (diff >= threshold) return { gap: more, cls: "heat", tag: "unusually warm" };
+  if (dir === "warm") {
+    if (diff >= threshold) return { gap: more, cls: "heat", tag: "more than usual" };
     if (tone === "calm") return { gap: fewer, cls: "calm", tag: "quieter than normal" };
-    return { gap: fewer, cls: "cold", tag: "fewer warm days" };
+    return { gap: fewer, cls: "cold", tag: "fewer than usual" };
   }
-  // cold nights
-  if (diff >= threshold) return { gap: more, cls: "cold", tag: "more cold nights" };
+  // cold-direction index
+  if (diff >= threshold) return { gap: more, cls: "cold", tag: "more than usual" };
   if (tone === "calm") return { gap: fewer, cls: "calm", tag: "quieter than normal" };
-  if (tone === "warm" || tone === "swing") return { gap: fewer, cls: "heat", tag: "fewer cold nights" };
-  return { gap: fewer, cls: "calm", tag: "fewer cold nights" };
+  if (tone === "warm" || tone === "swing") return { gap: fewer, cls: "heat", tag: "fewer than usual" };
+  return { gap: fewer, cls: "calm", tag: "fewer than usual" };
 }
 
 // per-chart one-liners; nulls where a chart has too little data to speak
@@ -392,7 +411,7 @@ async function boot() {
   state.index = index;
   setText(
     "generated-note",
-    `ERA5 via Open-Meteo · updated ${fmtDate(index.generated_at_utc.slice(0, 10))}`
+    `Data through ${fmtDate(index.recent_end)} · updated ${fmtDate(index.generated_at_utc.slice(0, 10))}`
   );
 
   renderNational();
@@ -454,27 +473,31 @@ function renderNational() {
     )
     .slice(0, 4);
 
-  const top = notable[0];
-  const topClause = top
-    ? ` Most recently flagged: <a href="#${top.id}" data-city="${top.id}">${esc(top.name)}</a> (${(FLAG_META[bestFlag(top.latest_flag.flags)] || {}).label || ""}, ${fmtDate(top.latest_flag.date)}).`
-    : "";
+  // Widespread-ness, stated at the CALIBRATED (tone) level, not raw day counts.
+  // "cities with ≥1 flagged day this week" is ~always high with several indices
+  // (base-rate noise); a city "running warmer" over the year is a real signal.
+  const n = cities.length;
+  const tones = cities.map((c) => cityTone(c.kpis));
+  const warmer = tones.filter((t) => t === "warm" || t === "swing").length;
+  const cooler = tones.filter((t) => t === "cool").length;
+  const decadeWarm = cities.filter((c) => (c.recent10_warm ?? 0) >= 0.13).length;
   const rows = [
-    `<p class="national-verdict">In the last week of data, <b>${flaggedWeek.length} of ${cities.length}</b> cities logged at least one day outside their seasonal normal.${topClause}</p>`,
+    `<p class="national-verdict">Over the past year, <b>${warmer} of ${n}</b> cities have been running warmer than their seasonal normal and <b>${cooler}</b> cooler; the rest sat near normal. Over the last decade, <b>${decadeWarm} of ${n}</b> show warm days rising above their 1991–2020 baseline.</p>`,
   ];
   const os = state.index.observed_summary;
-  if (os && os.temp_events_checked > 0) {
-    const pct = Math.round((os.temp_events_agree / os.temp_events_checked) * 100);
+  if (os && os.days_checked > 0) {
+    const pct = Math.round((os.days_agree / os.days_checked) * 100);
     rows.push(
-      `<div class="row"><span>ERA5 vs nearest weather station, recent heat/cold flags</span><b>${pct}% match</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${os.temp_events_agree} of ${os.temp_events_checked} within ${os.tolerance_c}°C, across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km</span></div>`
+      `<div class="row"><span>ERA5 vs nearest weather station, every day (temp)</span><b>${pct}% within ${os.tolerance_c}°C</b></div>`,
+      `<div class="row"><span style="color:var(--slate)">${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days, across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km</span></div>`
     );
   }
   const ir = state.index.imd_rain_summary;
-  if (ir && ir.precip_events_checked > 0) {
-    const rpct = Math.round((ir.precip_events_agree / ir.precip_events_checked) * 100);
+  if (ir && ir.flags_checked > 0) {
+    const rpct = Math.round((ir.flags_agree / ir.flags_checked) * 100);
     rows.push(
-      `<div class="row"><span>ERA5 vs IMD gauge rainfall, recent heavy-rain flags</span><b>${rpct}% match</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${ir.precip_events_agree} of ${ir.precip_events_checked} confirmed — reanalysis rain is harder to pin down than temperature, so rain flags carry more caution</span></div>`
+      `<div class="row"><span>ERA5 heavy-rain flags confirmed by IMD gauges</span><b>${rpct}%</b></div>`,
+      `<div class="row"><span style="color:var(--slate)">${ir.flags_agree.toLocaleString()} of ${ir.flags_checked.toLocaleString()} flags (±1 day) — rain is harder for reanalysis than temperature, so rain flags carry more caution</span></div>`
     );
   }
   const vs = state.index.validation_summary;
@@ -802,16 +825,20 @@ function renderKpis(city) {
   // each card leads with meaning (the signed gap), coloured by climate
   // DIRECTION of departure, not hazard type. Temperature cards are tone-aware
   // so "fewer cold nights" reads as warming (not "quiet") in a warming city.
+  // the ETCCDI 2×2: warm/cold × day/night, so the tool visibly checks all four
+  // directions. Warm days & warm nights are warming-direction; cold days &
+  // cold nights cooling-direction.
   const defs = [
-    { label: "Warm days", count: k.warm_days, m: tempMeaning("warm", k.warm_days ?? 0, k.warm_days_expected, tone, NOTABLE_TEMP) },
-    { label: "Unusually warm days", count: k.hot_extreme_days, m: kpiMeaning(k.hot_extreme_days ?? 0, k.hot_extreme_days_expected, "heat", 6) },
-    { label: "Cold nights", count: k.cold_nights, m: tempMeaning("cold", k.cold_nights ?? 0, k.cold_nights_expected, tone, NOTABLE_TEMP) },
-    { label: "Heavy-rain days", count: k.heavy_precip_days, m: kpiMeaning(k.heavy_precip_days ?? 0, k.heavy_precip_days_expected, "precip", NOTABLE_PRECIP) },
+    { label: "Warm days", sub: "hot daytimes", count: k.warm_days, m: tempMeaning("warm", k.warm_days ?? 0, k.warm_days_expected, tone, NOTABLE_TEMP) },
+    { label: "Warm nights", sub: "warm nighttimes", count: k.warm_nights, m: tempMeaning("warm", k.warm_nights ?? 0, k.warm_nights_expected, tone, NOTABLE_TEMP) },
+    { label: "Cold days", sub: "cold daytimes", count: k.cold_days, m: tempMeaning("cold", k.cold_days ?? 0, k.cold_days_expected, tone, NOTABLE_TEMP) },
+    { label: "Cold nights", sub: "cold nighttimes", count: k.cold_nights, m: tempMeaning("cold", k.cold_nights ?? 0, k.cold_nights_expected, tone, NOTABLE_TEMP) },
+    { label: "Heavy-rain days", sub: "wet-day p95", count: k.heavy_precip_days, m: kpiMeaning(k.heavy_precip_days ?? 0, k.heavy_precip_days_expected, "precip", NOTABLE_PRECIP) },
   ];
-  const cards = defs.map(({ label, count, m }) => {
+  const cards = defs.map(({ label, sub, count, m }) => {
     const tag = m.tag ? `<span class="kpi-tag ${m.cls}">${m.tag}</span>` : "";
     return `<div class="kpi ${m.cls}">
-      <div class="label">${esc(label)} · last year</div>
+      <div class="label">${esc(label)}</div>
       <p class="value">${count != null ? count : "–"}</p>
       <div class="expected">${esc(m.gap || "")} ${tag}</div>
     </div>`;
@@ -820,13 +847,13 @@ function renderKpis(city) {
     const snow = (k.rare_snow_days || 0) + (k.exceptional_snow_days || 0);
     cards.push(
       `<div class="kpi ${snow > 0 ? "snow" : "calm"}">
-        <div class="label">Unusual snow · last year</div>
+        <div class="label">Unusual snow</div>
         <p class="value">${snow}</p>
         <div class="expected">${snow > 0 ? "rare-season or exceptional amount" : "none outside the seasonal norm"}</div>
       </div>`
     );
   }
-  setHtml("kpi-cards", cards.join(""));
+  setHtml("kpi-cards", `<div class="kpi-note">Days in the past year outside the 1991–2020 seasonal normal, vs the number a normal year would produce:</div>` + cards.join(""));
 }
 
 /* ---------- most unusual days (best material, out of the modal) ---------- */
@@ -836,6 +863,8 @@ function eventRarity(event) {
   const d = event.detail || {};
   if (d.tmax) return d.tmax.n_at_or_above / d.tmax.n_baseline;
   if (d.tmin) return d.tmin.n_at_or_below / d.tmin.n_baseline;
+  if (d.tmax_low) return d.tmax_low.n_at_or_below / d.tmax_low.n_baseline;
+  if (d.tmin_high) return d.tmin_high.n_at_or_above / d.tmin_high.n_baseline;
   if (d.precip) return d.precip.n_at_or_above / d.precip.n_baseline;
   if (d.snow_occurrence) return d.snow_occurrence.baseline_snow_days / d.snow_occurrence.baseline_days;
   if (d.snow_amount) return d.snow_amount.n_at_or_above / d.snow_amount.n_baseline;
@@ -1294,13 +1323,15 @@ function evidenceStatement(event) {
   const d = event.detail || {};
   const only = (k, n, what) =>
     k === 0 ? `No ${what} (of ${n}) reached this value` : `Only ${k} of ${n} ${what} reached this value`;
+  const belowStmt = (o, what) =>
+    o.n_at_or_below === 0
+      ? `No comparable baseline ${what} (of ${o.n_baseline}) was this ${what === "day" ? "cold" : "cold"}`
+      : `Only ${o.n_at_or_below} of ${o.n_baseline} comparable baseline ${what}s were this cold`;
   const statements = {
     heat: () => d.tmax && only(d.tmax.n_at_or_above, d.tmax.n_baseline, "comparable baseline days"),
-    cold: () =>
-      d.tmin &&
-      (d.tmin.n_at_or_below === 0
-        ? `No comparable baseline day (of ${d.tmin.n_baseline}) was this cold`
-        : `Only ${d.tmin.n_at_or_below} of ${d.tmin.n_baseline} comparable baseline days were this cold`),
+    cold: () => d.tmin && belowStmt(d.tmin, "night"),
+    coldDay: () => d.tmax_low && belowStmt(d.tmax_low, "day"),
+    warmNight: () => d.tmin_high && only(d.tmin_high.n_at_or_above, d.tmin_high.n_baseline, "comparable baseline nights"),
     precip: () => d.precip && only(d.precip.n_at_or_above, d.precip.n_baseline, "comparable baseline wet days"),
     snowOcc: () =>
       d.snow_occurrence &&
@@ -1310,10 +1341,12 @@ function evidenceStatement(event) {
   const order = {
     hot_extreme: ["heat"], warm_day: ["heat"],
     cold_extreme: ["cold"], cold_night: ["cold"],
+    warm_night_extreme: ["warmNight"], warm_night: ["warmNight"],
+    cold_day_extreme: ["coldDay"], cold_day: ["coldDay"],
     heavy_precip: ["precip"],
     rare_snow: ["snowOcc", "snowAmt"],
     exceptional_snow: ["snowAmt", "snowOcc"],
-  }[event.category] || ["heat", "cold", "precip", "snowOcc", "snowAmt"];
+  }[event.category] || ["heat", "cold", "coldDay", "warmNight", "precip", "snowOcc", "snowAmt"];
   for (const key of order) {
     const s = statements[key]();
     if (s) return s;

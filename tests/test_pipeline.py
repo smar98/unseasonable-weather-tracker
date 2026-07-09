@@ -154,6 +154,22 @@ def test_extreme_days_flag_and_normal_days_do_not():
     assert day_flags(ds, "2024-06-25") == []  # present in last_365, no flags
 
 
+def test_inverse_flags_warm_night_and_cold_day():
+    """The 2x2 must be complete: an unusually high MIN flags a warm night, an
+    unusually low MAX flags a cold day."""
+    rng = random.Random(3)
+    recs = make_records(rng)
+    for r in recs:
+        if r["date"] == "2024-06-10":
+            r["tmin"] = 32.0   # min far above the ~20 baseline -> warm night
+        if r["date"] == "2024-06-12":
+            r["tmax"] = 18.0   # max far below the ~30 baseline -> cold day
+    ds = bd.build_city_dataset(CITY, recs, None, dt.date(2024, 12, 31), {})
+    assert "warm_night_extreme" in (day_flags(ds, "2024-06-10") or [])
+    assert "cold_day_extreme" in (day_flags(ds, "2024-06-12") or [])
+    assert ds["kpis"]["warm_nights"] >= 1 and ds["kpis"]["cold_days"] >= 1
+
+
 def test_snow_rule_regression_common_vs_rare_season():
     """The v1 bug: the snow flag never fired. It must fire for snow in a season
     where snow is rare (<=5% baseline), and must NOT fire in a season where snow
@@ -226,11 +242,13 @@ def test_attach_observed_no_station_is_single_source():
 def test_attach_imd_rain_confirms_and_flags_caution():
     events = [
         {"category": "heavy_precip", "date": "2024-07-01", "value": 90.0},   # IMD 120mm -> confirms
-        {"category": "heavy_precip", "date": "2024-07-02", "value": 60.0},   # IMD 0.2mm -> caution
+        {"category": "heavy_precip", "date": "2024-09-10", "value": 60.0},   # IMD dry all ±1 -> caution
         {"category": "heavy_precip", "date": "2026-01-01", "value": 40.0},   # after archive -> no_data
         {"category": "hot_extreme",  "date": "2024-05-01", "value": 44.0},   # not a rain flag
     ]
-    imd = {"2024-07-01": 120.0, "2024-07-02": 0.2}  # 2026 absent
+    # dates chosen so the ±1-day window doesn't bleed a wet day into the dry case
+    imd = {"2024-06-30": 0.0, "2024-07-01": 120.0, "2024-07-02": 0.0,
+           "2024-09-09": 0.2, "2024-09-10": 0.2, "2024-09-11": 0.2}  # 2026 absent
     summary = bd.attach_imd_rain(events, imd)
     assert events[0]["imd"]["status"] == "agree"
     assert events[1]["imd"]["status"] == "disagree"

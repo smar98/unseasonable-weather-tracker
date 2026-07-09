@@ -408,28 +408,47 @@ def build_city_dataset(
                 round(float(record["tmax"]) - base_mean, 1) if base_mean is not None else None
             )
             if pct is not None:
+                # daily MAX: high = warm day (TX90p), low = cold day (TX10p)
                 if pct > HOT_PCT:
                     day["flags"].append("hot_extreme")
                 elif pct > WARM_PCT:
                     day["flags"].append("warm_day")
+                elif pct < COLD_EXTREME_PCT:
+                    day["flags"].append("cold_day_extreme")
+                elif pct < COLD_PCT:
+                    day["flags"].append("cold_day")
                 if pct > WARM_PCT:
                     ranked = tmax_pools.rank(doy, float(record["tmax"]), exclude)
                     if ranked:
                         day["detail"]["tmax"] = exceed_statement(*ranked)
+                elif pct < COLD_PCT:
+                    ranked = tmax_pools.rank(doy, float(record["tmax"]), exclude)
+                    if ranked:
+                        below, equal, size = ranked
+                        day["detail"]["tmax_low"] = {"n_baseline": size, "n_at_or_below": below + equal}
 
         if record["tmin"] is not None:
             pct = tmin_pools.midrank_pct(doy, float(record["tmin"]), exclude)
             day["tmin_pct"] = pct
             if pct is not None:
+                # daily MIN: low = cold night (TN10p), high = warm night (TN90p)
                 if pct < COLD_EXTREME_PCT:
                     day["flags"].append("cold_extreme")
                 elif pct < COLD_PCT:
                     day["flags"].append("cold_night")
+                elif pct > HOT_PCT:
+                    day["flags"].append("warm_night_extreme")
+                elif pct > WARM_PCT:
+                    day["flags"].append("warm_night")
                 if pct < COLD_PCT:
                     ranked = tmin_pools.rank(doy, float(record["tmin"]), exclude)
                     if ranked:
                         below, equal, size = ranked
                         day["detail"]["tmin"] = {"n_baseline": size, "n_at_or_below": below + equal}
+                elif pct > WARM_PCT:
+                    ranked = tmin_pools.rank(doy, float(record["tmin"]), exclude)
+                    if ranked:
+                        day["detail"]["tmin_high"] = exceed_statement(*ranked)
 
         precip = float(record["precip"] or 0.0)
         if precip >= WET_DAY_MM:
@@ -479,7 +498,9 @@ def build_city_dataset(
     ribbon = build_ribbon(tmax_pools, tmin_pools, wet_pools, snow_occurrence, snow_capable)
     events = top_events(classified, recent_end, city["id"], validation)
     observed_summary = attach_observed(events, obs, station)
+    observed_summary["all_days"] = obs_all_day_agreement(records, obs) if station else {"days": 0, "agree": 0}
     imd_summary = attach_imd_rain(events, imd_rain)
+    imd_summary["all_flags"] = imd_all_flag_agreement(classified, imd_rain)
     last_365 = [compact_day(day) for day in classified if day["date"] > (recent_end - dt.timedelta(days=365)).isoformat()]
     kpis = build_kpis(classified, recent_end, snow_capable)
 
@@ -608,13 +629,17 @@ def build_ribbon(tmax_pools, tmin_pools, wet_pools, snow_occurrence, snow_capabl
 
 
 FLAG_LABELS = {
-    "hot_extreme": "Extreme heat",
+    "hot_extreme": "Unusually warm day",
     "warm_day": "Warm day",
-    "cold_extreme": "Extreme cold",
+    "cold_extreme": "Unusually cold night",
     "cold_night": "Cold night",
-    "heavy_precip": "Heavy precipitation",
+    "warm_night_extreme": "Unusually warm night",
+    "warm_night": "Warm night",
+    "cold_day_extreme": "Unusually cold day",
+    "cold_day": "Cold day",
+    "heavy_precip": "Unusually wet",
     "rare_snow": "Rare-season snow",
-    "exceptional_snow": "Exceptional snow amount",
+    "exceptional_snow": "Exceptional snowfall",
 }
 
 
@@ -625,6 +650,8 @@ def top_events(classified, recent_end: dt.date, city_id: str, validation) -> lis
     for category, pct_key, value_key, unit in (
         ("hot_extreme", "tmax_pct", "tmax", "°C"),
         ("cold_extreme", "tmin_pct", "tmin", "°C"),
+        ("warm_night_extreme", "tmin_pct", "tmin", "°C"),
+        ("cold_day_extreme", "tmax_pct", "tmax", "°C"),
         ("heavy_precip", "precip_wet_pct", "precip", "mm"),
         ("rare_snow", "snow_occ_prob", "snow", "cm"),
         ("exceptional_snow", "snow_amount_pct", "snow", "cm"),
@@ -632,7 +659,7 @@ def top_events(classified, recent_end: dt.date, city_id: str, validation) -> lis
         candidates = [day for day in recent if category in day["flags"]]
         if category == "rare_snow":
             candidates.sort(key=lambda day: ((day.get("snow_occ_prob") or 1.0), -(day["snow"] or 0.0)))
-        elif category in ("cold_extreme",):
+        elif category in ("cold_extreme", "cold_day_extreme"):
             candidates.sort(key=lambda day: (day.get(pct_key) if day.get(pct_key) is not None else 1.0))
         else:
             candidates.sort(key=lambda day: -(day.get(pct_key) or 0.0))
@@ -679,6 +706,12 @@ def build_kpis(classified, recent_end: dt.date, snow_capable: bool) -> dict[str,
         "hot_extreme_days_expected": round(0.05 * n_temp) if n_temp else None,
         "cold_nights": sum(1 for day in window if "cold_night" in day["flags"] or "cold_extreme" in day["flags"]),
         "cold_nights_expected": round(0.10 * n_temp) if n_temp else None,
+        # the inverse pair, completing the ETCCDI 2x2: warm nights (TN90p) and
+        # cold days (TX10p). Warm nights are the dominant heat-health signal.
+        "warm_nights": sum(1 for day in window if "warm_night" in day["flags"] or "warm_night_extreme" in day["flags"]),
+        "warm_nights_expected": round(0.10 * n_temp) if n_temp else None,
+        "cold_days": sum(1 for day in window if "cold_day" in day["flags"] or "cold_day_extreme" in day["flags"]),
+        "cold_days_expected": round(0.10 * n_temp) if n_temp else None,
         "heavy_precip_days": sum(1 for day in window if "heavy_precip" in day["flags"]),
         "heavy_precip_days_expected": round(0.05 * wet_days) if wet_days else None,
         "wet_days": wet_days,
@@ -726,7 +759,9 @@ def load_observed(city_id: str) -> dict[str, dict[str, float | None]]:
 # which observed variable each flag is checked against
 _OBS_VAR = {
     "hot_extreme": "tmax", "warm_day": "tmax",
+    "cold_day_extreme": "tmax", "cold_day": "tmax",
     "cold_extreme": "tmin", "cold_night": "tmin",
+    "warm_night_extreme": "tmin", "warm_night": "tmin",
     "heavy_precip": "prcp",
 }
 
@@ -792,23 +827,72 @@ IMD_MIN_MM = 1.0
 IMD_RATIO = 0.33
 
 
+def _imd_best(imd_rain: dict[str, float], date_iso: str) -> tuple[float | None, float | None]:
+    """Best IMD rainfall within ±1 day of the date, and the exact-day value.
+    The ±1-day window absorbs the day-boundary mismatch between IMD's
+    0830-0830 IST accumulation and ERA5's daily aggregation — a storm can
+    land on adjacent calendar dates in the two products."""
+    exact = imd_rain.get(date_iso)
+    base = dt.date.fromisoformat(date_iso)
+    vals = [imd_rain.get((base + dt.timedelta(days=k)).isoformat()) for k in (-1, 0, 1)]
+    vals = [v for v in vals if v is not None]
+    return (max(vals) if vals else None), exact
+
+
 def attach_imd_rain(events: list[dict[str, Any]], imd_rain: dict[str, float]) -> dict[str, Any]:
-    """Cross-check heavy-precipitation flags against IMD gridded rainfall."""
+    """Cross-check heavy-precipitation flags against IMD gridded rainfall,
+    with a ±1-day window for the accumulation-boundary mismatch."""
     checked = agree = 0
     for event in events:
         if event["category"] != "heavy_precip":
             event["imd"] = None
             continue
-        v = imd_rain.get(event["date"])
-        if v is None:  # e.g. an event after the IMD archive ends
+        best, _exact = _imd_best(imd_rain, event["date"])
+        if best is None:  # e.g. an event after the IMD archive ends
             event["imd"] = {"status": "no_data"}
             continue
         era5 = event.get("value")
-        hit = v >= IMD_MIN_MM and (era5 is None or v >= IMD_RATIO * era5)
+        hit = best >= IMD_MIN_MM and (era5 is None or best >= IMD_RATIO * era5)
         checked += 1
         agree += 1 if hit else 0
-        event["imd"] = {"rain_mm": round(v, 1), "era5_mm": era5, "status": "agree" if hit else "disagree"}
+        event["imd"] = {"rain_mm": round(best, 1), "era5_mm": era5, "status": "agree" if hit else "disagree"}
     return {"precip_events_checked": checked, "precip_events_agree": agree}
+
+
+def obs_all_day_agreement(records: list[dict[str, Any]], obs: dict) -> dict[str, int]:
+    """ERA5-vs-station agreement across EVERY overlapping day, not just the
+    strongest flagged events — an unbiased accuracy figure. Counts a day as a
+    match when ERA5's max (and min) sit within the tolerance of the station's."""
+    days = agree = 0
+    for record in records:
+        o = obs.get(record["date"])
+        if not o:
+            continue
+        pairs = [(record["tmax"], o.get("tmax")), (record["tmin"], o.get("tmin"))]
+        checkable = [(a, b) for a, b in pairs if a is not None and b is not None]
+        if not checkable:
+            continue
+        days += 1
+        if all(abs(float(a) - float(b)) <= OBS_TEMP_TOL_C for a, b in checkable):
+            agree += 1
+    return {"days": days, "agree": agree}
+
+
+def imd_all_flag_agreement(classified: list[dict[str, Any]], imd_rain: dict[str, float]) -> dict[str, int]:
+    """IMD confirmation across ALL ERA5 heavy-rain flags in the record (±1 day),
+    not only the top events shown on cards."""
+    flags = agree = 0
+    for day in classified:
+        if "heavy_precip" not in day["flags"]:
+            continue
+        best, _ = _imd_best(imd_rain, day["date"])
+        if best is None:
+            continue
+        flags += 1
+        era5 = day.get("precip") or 0.0
+        if best >= IMD_MIN_MM and best >= IMD_RATIO * era5:
+            agree += 1
+    return {"flags": flags, "agree": agree}
 
 
 def parse_args() -> argparse.Namespace:
@@ -906,30 +990,32 @@ def main() -> int:
             validation_summary["checked"] += 1
             validation_summary[status] += 1
 
-    # automatic observed cross-check: how well ERA5 matched the nearest station
+    # automatic observed cross-check: ERA5 vs nearest station, measured across
+    # EVERY overlapping day (an unbiased accuracy figure), not just the flags
     observed_summary = {
         "cities_with_station": sum(1 for e in index_entries if e["observed"]["has_station"]),
         "cities_total": len(index_entries),
-        "temp_events_checked": sum(e["observed"]["temp_events_checked"] for e in index_entries),
-        "temp_events_agree": sum(e["observed"]["temp_events_agree"] for e in index_entries),
+        "days_checked": sum(e["observed"]["all_days"]["days"] for e in index_entries),
+        "days_agree": sum(e["observed"]["all_days"]["agree"] for e in index_entries),
         "tolerance_c": OBS_TEMP_TOL_C,
         "note": (
-            "Independent check: for each recent temperature flag with a station within 35 km, "
-            "whether ERA5's value sits within the tolerance of the observed value (NOAA ISD/GHCN "
-            "via Meteostat). Snow and the high Himalaya have no nearby station and stay single-source."
+            "ERA5 daily max & min vs the nearest station (NOAA ISD/GHCN via Meteostat), across "
+            "every overlapping day since 2010 — not only flagged events. Snow and the high "
+            "Himalaya have no nearby station and stay single-source."
         ),
     }
 
-    # independent rain cross-check against IMD gridded gauge data (all-India,
-    # so it also covers cities that have no NOAA station)
+    # independent rain cross-check against IMD gridded gauge data, across ALL
+    # ERA5 heavy-rain flags (±1 day for the accumulation-boundary mismatch)
     imd_summary = {
-        "cities_with_rain": sum(1 for e in index_entries if e["imd_rain"]["precip_events_checked"] > 0),
-        "precip_events_checked": sum(e["imd_rain"]["precip_events_checked"] for e in index_entries),
-        "precip_events_agree": sum(e["imd_rain"]["precip_events_agree"] for e in index_entries),
+        "cities_with_rain": sum(1 for e in index_entries if e["imd_rain"]["all_flags"]["flags"] > 0),
+        "flags_checked": sum(e["imd_rain"]["all_flags"]["flags"] for e in index_entries),
+        "flags_agree": sum(e["imd_rain"]["all_flags"]["agree"] for e in index_entries),
         "note": (
-            "Heavy-rain flags cross-checked against IMD gridded daily rainfall (0.25 deg, "
-            "Pai et al. 2014, gauge-based and independent of ERA5). Archive ends 2025, so 2026 "
-            "flags are not yet checkable; IMD publishes no snow or temperature-at-this-resolution product."
+            "Every ERA5 heavy-rain flag cross-checked against IMD gridded daily rainfall (0.25 deg, "
+            "Pai et al. 2014, gauge-based, independent of ERA5), within +/-1 day to absorb the "
+            "0830-IST accumulation-boundary mismatch. Archive ends 2025, so 2026 flags aren't yet "
+            "checkable; IMD has no snow or fine-resolution temperature product."
         ),
     }
 
