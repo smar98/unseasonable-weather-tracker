@@ -20,6 +20,7 @@ const COLORS = {
   mist: "#8ea0a8",
   band: "#e7ecef",
   navy: "#17324d",
+  graticule: "#c6d2d2",
 };
 
 /* Labels are season-relative on purpose: a flag means "unusual FOR THIS
@@ -415,6 +416,7 @@ async function boot() {
   );
 
   renderNational();
+  renderValidationDetail();
   renderCityList("");
   initMap();
 
@@ -484,27 +486,15 @@ function renderNational() {
   const rows = [
     `<p class="national-verdict">Over the past year, <b>${warmer} of ${n}</b> cities have been running warmer than their seasonal normal and <b>${cooler}</b> cooler; the rest sat near normal. Over the last decade, <b>${decadeWarm} of ${n}</b> show warm days rising above their 1991–2020 baseline.</p>`,
   ];
+  // one compressed trust line; the full cross-check breakdown lives in the
+  // method band so Fig. 1 answers "where is India unusual" without a QA detour
   const os = state.index.observed_summary;
-  if (os && os.days_checked > 0) {
-    const pct = Math.round((os.days_agree / os.days_checked) * 100);
-    rows.push(
-      `<div class="row"><span>ERA5 vs nearest weather station, every day (temp)</span><b>${pct}% within ${os.tolerance_c}°C</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days, across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km</span></div>`
-    );
-  }
   const ir = state.index.imd_rain_summary;
-  if (ir && ir.flags_checked > 0) {
+  if (os && os.days_checked > 0 && ir && ir.flags_checked > 0) {
+    const tpct = Math.round((os.days_agree / os.days_checked) * 100);
     const rpct = Math.round((ir.flags_agree / ir.flags_checked) * 100);
     rows.push(
-      `<div class="row"><span>ERA5 heavy-rain flags confirmed by IMD gauges</span><b>${rpct}%</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${ir.flags_agree.toLocaleString()} of ${ir.flags_checked.toLocaleString()} flags (±1 day) — rain is harder for reanalysis than temperature, so rain flags carry more caution</span></div>`
-    );
-  }
-  const vs = state.index.validation_summary;
-  if (vs && vs.checked > 0) {
-    rows.push(
-      `<div class="row"><span>Flags also hand-checked against news/IMD</span><b>${vs.checked}</b></div>`,
-      `<div class="row"><span style="color:var(--slate)">${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} no public record · ${vs.contradicted} contradicted</span></div>`
+      `<p class="trust-line">Cross-checked against real observations: <b>${tpct}%</b> station agreement on temperature, <b>${rpct}%</b> of rain flags gauge-confirmed. <a href="#how-to-read">How it's validated →</a></p>`
     );
   }
   rows.push(renderLeaderboard());
@@ -584,6 +574,35 @@ function renderLeaderboard() {
   );
 }
 
+// full cross-check breakdown, shown in the method band (moved out of Fig. 1)
+function renderValidationDetail() {
+  const node = byId("validation-detail");
+  if (!node) return;
+  const os = state.index.observed_summary;
+  const ir = state.index.imd_rain_summary;
+  const vs = state.index.validation_summary;
+  const rows = [];
+  if (os && os.days_checked > 0) {
+    const pct = Math.round((os.days_agree / os.days_checked) * 100);
+    rows.push(
+      `<li><b>${pct}% temperature agreement.</b> ERA5's daily max &amp; min sit within ${os.tolerance_c}°C of the nearest weather station (NOAA ISD/GHCN) on ${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days measured — every overlapping day, not just flagged ones — across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km.</li>`
+    );
+  }
+  if (ir && ir.flags_checked > 0) {
+    const rpct = Math.round((ir.flags_agree / ir.flags_checked) * 100);
+    rows.push(
+      `<li><b>${rpct}% of rain flags gauge-confirmed.</b> IMD gridded rainfall records real rain on ${ir.flags_agree.toLocaleString()} of ${ir.flags_checked.toLocaleString()} heavy-rain flags (±1 day). Rain is harder for reanalysis than temperature, so rain flags carry more caution.</li>`
+    );
+  }
+  if (vs && vs.checked > 0) {
+    rows.push(
+      `<li><b>${vs.checked} flags hand-checked</b> against news/IMD: ${vs.validated} validated · ${vs.corroborated} corroborated · ${vs.unverified} no public record · ${vs.contradicted} contradicted.</li>`
+    );
+  }
+  rows.push(`<li>No independent source can check snow or the high Himalaya (no station, no gridded snow product); those stay single-source and are labelled.</li>`);
+  node.innerHTML = `<ul>${rows.join("")}</ul>`;
+}
+
 function addDays(iso, delta) {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + delta);
@@ -609,11 +628,12 @@ function renderCityList(query) {
       const tone = cityTone(city.kpis);
       const color = TONE_COLOR[tone];
       const active = city.id === state.selectedId ? " active" : "";
+      // the dot already encodes the tone; only spell it out when it's notable
+      const sub = tone === "neutral" ? "" : `<span class="sub">${TONE_LABEL[tone]}</span>`;
       parts.push(
         `<button class="city-row${active}" data-city="${city.id}" title="${TONE_LABEL[tone]}">
           <span class="flag-dot" style="background:${color}"></span>
-          <span>${esc(city.name)}</span>
-          <span class="sub">${TONE_LABEL[tone]}</span>
+          <span>${esc(city.name)}</span>${sub}
         </button>`
       );
     }
@@ -724,6 +744,7 @@ async function selectCity(id) {
 
   try {
     if (status) status.hidden = true;
+    renderTape(city);
     renderHeader(city);
     renderVerdict(city);
     renderKpis(city);
@@ -853,7 +874,7 @@ function renderKpis(city) {
       </div>`
     );
   }
-  setHtml("kpi-cards", `<div class="kpi-note">Days in the past year outside the 1991–2020 seasonal normal, vs the number a normal year would produce:</div>` + cards.join(""));
+  setHtml("kpi-cards", cards.join("")); // the intro line is static in index.html
 }
 
 /* ---------- most unusual days (best material, out of the modal) ---------- */
@@ -964,6 +985,108 @@ function corroborationStatement(event) {
     `The station ${o.station_km} km away (${esc(o.station)}) observed ${o.obs}°C; ERA5 estimated ${o.era5}°C — ` +
     (agree ? `within ${Math.abs(o.delta)}°C, so the estimate holds.` : `a ${Math.abs(o.delta)}°C gap, so treat this flag with caution.`) +
     `</div>`;
+}
+
+/* ---------- signature: the instrument tape ----------
+   The selected city's last 365 days as one tick per day — plain ink for an
+   ordinary day, a coloured tick for a flagged one — like paper feeding off a
+   thermograph. The whole point of the tool, visible at a glance. */
+
+function renderTape(city) {
+  const svg = byId("tape");
+  if (!svg) return;
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const days = city.last_365;
+  if (!days || !days.length) return;
+
+  const W = 1460, H = 60, base = 40, pad = 10;
+  const n = days.length;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  const X = (i) => pad + (i / (n - 1)) * (W - 2 * pad);
+  // tick width in viewBox units, ~60% of a day-slot, so ticks keep a visible
+  // gap at every viewport (stroke scales with the container, unlike a fixed px)
+  const dayW = (W - 2 * pad) / (n - 1);
+  const tickW = Math.max(1.6, dayW * 0.6);
+
+  // baseline rule
+  el("line", { x1: pad, x2: W - pad, y1: base, y2: base, stroke: COLORS.graticule || "#c6d2d2", "stroke-width": 1, "vector-effect": "non-scaling-stroke" }, svg);
+
+  // month initials where the month changes across the rolling window
+  let lastMonth = null;
+  days.forEach((d, i) => {
+    const m = d.d.slice(0, 7);
+    if (m !== lastMonth) {
+      lastMonth = m;
+      if (i > 2 && i < n - 4) {
+        el("text", { x: X(i), y: 55, class: "tape-month" }, svg).textContent =
+          new Date(`${d.d}T00:00:00`).toLocaleDateString("en-IN", { month: "short" })[0];
+      }
+    }
+  });
+
+  // one tick per day
+  days.forEach((d, i) => {
+    const x = X(i);
+    const flag = d.f ? bestFlag(d.f) : null;
+    if (flag && FLAG_META[flag]) {
+      const meta = FLAG_META[flag];
+      const major = ["hot_extreme", "cold_extreme", "warm_night_extreme", "cold_day_extreme", "rare_snow", "exceptional_snow"].includes(flag);
+      el("line", {
+        x1: x, x2: x, y1: base, y2: base - (major ? 18 : 12),
+        stroke: meta.color, "stroke-width": tickW,
+      }, svg);
+      if (d.f.includes("heavy_precip")) {
+        el("circle", { cx: x, cy: base + 4, r: Math.max(1, tickW * 0.7), fill: COLORS.precip }, svg);
+      }
+    } else {
+      el("line", {
+        x1: x, x2: x, y1: base, y2: base - 7,
+        stroke: COLORS.mist, "stroke-width": tickW * 0.8, opacity: 0.5,
+      }, svg);
+    }
+  });
+
+  // today marker (right edge, ochre)
+  const lastX = X(n - 1);
+  el("line", { x1: lastX, x2: lastX, y1: base - 22, y2: base + 8, stroke: COLORS.ochre, "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }, svg);
+
+  // hover + click via a transparent overlay
+  const tip = tapeTip();
+  const overlay = el("rect", { x: 0, y: 0, width: W, height: H, fill: "transparent", style: "cursor:pointer" }, svg);
+  const eventByDate = new Map((city.events || []).map((e) => [e.date, e]));
+  const rect = () => svg.getBoundingClientRect();
+  overlay.addEventListener("mousemove", (ev) => {
+    const r = rect();
+    const i = Math.round(((ev.clientX - r.left) / r.width) * (n - 1));
+    const d = days[Math.max(0, Math.min(n - 1, i))];
+    if (!d) return;
+    const labels = d.f ? d.f.map((f) => (FLAG_META[f]?.label || f)).join(" · ") : "within seasonal range";
+    tip.innerHTML = `<b>${fmtDate(d.d)}</b> · ${esc(labels)}` +
+      (d.tx != null ? ` · ${d.tx}°/${d.tn}°C` : "") + (d.pr ? ` · ${d.pr} mm` : "");
+    tip.style.opacity = 1;
+    const band = svg.parentElement.getBoundingClientRect();
+    tip.style.left = `${Math.min(band.width - tip.offsetWidth - 8, Math.max(8, ev.clientX - band.left - tip.offsetWidth / 2))}px`;
+  });
+  overlay.addEventListener("mouseleave", () => { tip.style.opacity = 0; });
+  overlay.addEventListener("click", (ev) => {
+    const r = rect();
+    const i = Math.round(((ev.clientX - r.left) / r.width) * (n - 1));
+    const d = days[Math.max(0, Math.min(n - 1, i))];
+    if (d && eventByDate.has(d.d)) openModal(eventByDate.get(d.d), city);
+  });
+}
+
+function tapeTip() {
+  let tip = document.querySelector(".tape-tip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.className = "tape-tip";
+    const band = byId("tape").parentElement;
+    band.style.position = "relative";
+    band.appendChild(tip);
+  }
+  return tip;
 }
 
 /* ---------- trend chart ---------- */

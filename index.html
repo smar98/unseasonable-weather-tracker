@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Unseasonable — India seasonal anomaly tracker</title>
+    <title>Unseasonable — India seasonal weather record</title>
     <meta
       name="description"
-      content="Screening tool for unseasonable weather across 62 Indian cities: ERA5 reanalysis compared against a 1991-2020 seasonal baseline using ETCCDI-style percentile indices."
+      content="A synoptic record for 62 Indian cities: is today's weather unusual for this place and season? ERA5 reanalysis vs a 1991-2020 seasonal baseline, cross-checked against station and gauge data."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap"
       rel="stylesheet"
     />
     <link
@@ -20,96 +20,69 @@
       integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260709-3" />
+    <link rel="stylesheet" href="styles.css?v=20260709-5" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="wordmark">un<span>seasonable</span></div>
-      <div class="tagline">India seasonal anomaly tracker</div>
+    <!-- masthead -->
+    <header class="masthead">
+      <div class="wordmark">Unseasonable</div>
+      <div class="masthead-tag">India seasonal weather record</div>
       <div class="spacer"></div>
-      <div class="meta" id="generated-note">Loading dataset…</div>
-      <a
-        class="gh"
-        href="https://github.com/smar98/unseasonable-weather-tracker"
-        target="_blank"
-        rel="noopener"
-        >GitHub</a
-      >
+      <div class="masthead-meta" id="generated-note">Loading record…</div>
+      <a class="gh-chip" href="https://github.com/smar98/unseasonable-weather-tracker" target="_blank" rel="noopener">GitHub</a>
     </header>
 
-    <section class="hero">
-      <p class="eyebrow">Public-data screening tool · 62 cities · 1960–present</p>
-      <h1>Is this weather unusual for this place and time of year?</h1>
-      <p class="dek">
-        Pick a city and read the verdict. Each day is compared against the same
-        season in a fixed 1991–2020 baseline — flags are screening signals to
-        verify, not proof. <a href="#national-card">Where India is running unusual ↓</a>
-        · <a href="#how-to-read">How this works ↓</a>
-      </p>
-      <details class="why">
-        <summary>Why does unseasonable weather matter?</summary>
-        <div class="why-body">
-          <p>
-            It is the timing, not just the heat or cold, that does the damage.
-            A warm spell, cold snap or downpour that arrives out of season
-            catches everything built around the normal calendar — far more
-            disruptive than a hot day in peak summer that everyone already
-            plans for. This tool covers cities and towns; here is what an
-            out-of-season signal at each one means:
-          </p>
-          <ul>
-            <li><b>Heat &amp; health.</b> Off-season heat hits people, hospitals and power grids before the summer routine — and its defences — are in place.</li>
-            <li><b>Water.</b> When Himalayan snow falls or melts out of season, it shifts river flow and reservoir planning for the cities and plains downstream.</li>
-            <li><b>Floods &amp; hazards.</b> Unseasonal cloudbursts drive urban flooding; in the hill stations, landslides and avalanches on slopes that aren't braced for them.</li>
-            <li><b>The land around them.</b> Many of these grid cells also take in nearby cropland, where off-season heat, cold or rain hits yields — though a dedicated farm-region layer is a planned addition, not what this covers yet.</li>
-          </ul>
-          <p class="why-foot">
-            That is why this tool asks “unusual <em>for this season</em>?”, not
-            “hot or cold?”. A 5&nbsp;°C January day in Kashmir can matter more
-            than a 40&nbsp;°C May day that everyone expects.
-          </p>
-        </div>
-      </details>
+    <!-- SIGNATURE: the instrument tape (selected city's last 365 days) -->
+    <section class="tape-band" aria-label="Daily record, last 365 days">
+      <div class="tape-wrap"><svg id="tape" role="img" aria-label="One tick per day; coloured ticks are flagged days"></svg></div>
     </section>
 
-    <main class="layout">
-      <aside class="sidebar">
-        <div class="card map-card">
-          <div id="map"></div>
-          <div class="map-legend">
-            <span class="key"><span class="dot" style="background:#c25541"></span>Running warmer</span>
-            <span class="key"><span class="dot" style="background:#4478b8"></span>Running cooler</span>
-            <span class="key"><span class="dot" style="background:#c77d1e"></span>Both extremes</span>
-            <span class="key"><span class="dot" style="background:#aeb9bf"></span>Near normal</span>
+    <!-- hero -->
+    <section class="hero">
+      <p class="chart-header" id="hero-eyebrow">INDIA · 62 CITIES · DAILY RECORD SINCE 1960 · BASELINE 1991–2020</p>
+      <h1>Is this weather unusual for this place and time of year?</h1>
+      <p class="dek">
+        Every day at 62 Indian cities, measured against the same season across
+        1991–2020. Flags are screening signals to verify, not proof.
+      </p>
+      <form class="hero-search" id="hero-search" autocomplete="off" onsubmit="return false">
+        <input type="search" id="city-search" class="city-search" placeholder="Find your city — 62 tracked" aria-label="Search cities" />
+      </form>
+    </section>
+
+    <main>
+      <!-- FIG. 1 — national view -->
+      <section class="plate" id="national-card">
+        <div class="plate-head">
+          <span class="fig">Fig. 1</span>
+          <h2>Where India is running unusual</h2>
+        </div>
+        <div class="national-grid">
+          <div class="map-col">
+            <div id="map"></div>
+            <div class="map-legend">
+              <span class="key"><span class="dot" style="background:#c25541"></span>Running warmer</span>
+              <span class="key"><span class="dot" style="background:#4478b8"></span>Running cooler</span>
+              <span class="key"><span class="dot" style="background:#c77d1e"></span>Both extremes</span>
+              <span class="key"><span class="dot" style="background:#aeb9bf"></span>Near normal</span>
+            </div>
+            <p class="map-note" id="map-note">
+              Each dot is a city, coloured by how its past year compares with its own 1991–2020 seasonal normal.
+            </p>
           </div>
-          <p class="map-note" id="map-note">
-            Each dot is a city, coloured by how its past year compares with its
-            own 1991–2020 seasonal normal.
-          </p>
+          <div class="national-col national" id="national-summary"></div>
         </div>
+      </section>
 
-        <div class="card" id="national-card">
-          <div class="card-head"><h2>Across India</h2></div>
-          <div class="card-body national" id="national-summary"></div>
-        </div>
+      <!-- city rail -->
+      <nav class="city-rail" aria-label="City index">
+        <span class="rail-label">Cities</span>
+        <div class="city-list" id="city-list"></div>
+      </nav>
 
-        <div class="card">
-          <div class="card-head"><h2>Cities</h2></div>
-          <div class="card-body">
-            <input
-              type="search"
-              id="city-search"
-              class="city-search"
-              placeholder="Search 62 cities…"
-              autocomplete="off"
-            />
-            <nav class="city-list" id="city-list" aria-label="City list"></nav>
-          </div>
-        </div>
-      </aside>
-
-      <section class="detail" id="detail">
-        <div class="status-note" id="detail-status">Loading city data…</div>
+      <!-- the city record -->
+      <section class="record" id="detail">
+        <div class="status-note" id="detail-status">Pick a city above to read its record.</div>
 
         <div id="city-header" hidden>
           <div class="city-head">
@@ -117,85 +90,65 @@
             <span class="where" id="city-where"></span>
           </div>
 
-          <!-- THE FOCAL POINT: one plain-language verdict, computed from data -->
           <div class="verdict" id="city-verdict"></div>
-
           <p class="elev-note" id="city-elev"></p>
-
+          <div class="kpi-note">Days in the past year outside the 1991–2020 seasonal normal, vs a normal year:</div>
           <div class="kpis" id="kpi-cards"></div>
-
           <div class="live-strip" id="live-strip"></div>
 
-          <!-- primary exhibit: the trend, with its takeaway as the heading -->
-          <div class="card chart-card" id="trend-card">
-            <div class="card-head">
-              <h2 id="trend-title">Days outside the seasonal normal, 1960–present</h2>
-              <span class="what"
-                >Share of days each year beyond the 1991–2020 seasonal 90th/10th
-                percentiles; 9-year mean, annual faint. The dashed line is the
-                ~10% expected under the 1991–2020 baseline.</span
-              >
+          <!-- FIG. 2 — hero trend -->
+          <div class="plate chart-card" id="trend-card">
+            <div class="plate-head">
+              <span class="fig">Fig. 2</span>
+              <h3 id="trend-title">Days outside the seasonal normal, 1960–present</h3>
             </div>
+            <p class="what">Share of days each year beyond the 1991–2020 seasonal 90th/10th percentiles; 9-year mean, annual faint. The dashed line is the ~10% expected under the baseline.</p>
             <div class="chart-wrap" id="trend-chart"></div>
             <div class="legend" id="trend-legend"></div>
           </div>
 
-          <!-- best material, surfaced out of the modal -->
-          <div class="card" id="top-events-card">
-            <div class="card-head">
-              <h2>The most unusual days · last 3 years</h2>
-              <span class="what">Click any day for the full evidence and how to verify it.</span>
+          <!-- most unusual days -->
+          <div class="plate" id="top-events-card">
+            <div class="plate-head">
+              <span class="fig">Log</span>
+              <h3>The most unusual days · last 3 years</h3>
             </div>
-            <div class="card-body top-events" id="top-events"></div>
+            <p class="what">Click any day for the full evidence and how to verify it.</p>
+            <div class="top-events" id="top-events"></div>
           </div>
 
-          <!-- everything below is the same rigour, one scroll down -->
-          <div class="detail-divider" id="full-record">
-            <span>The full record</span>
-          </div>
+          <div class="record-divider"><span>The full record</span></div>
 
-          <div class="card chart-card demoted" id="ribbon-card">
-            <div class="card-head">
-              <h2 id="ribbon-title">The last year against the seasonal envelope</h2>
-              <span class="what"
-                >Band = 1991–2020 seasonal 5th–95th percentile of the daily high;
-                line = the past year. Dots mark flagged days.</span
-              >
+          <div class="plate chart-card demoted" id="ribbon-card">
+            <div class="plate-head">
+              <span class="fig">Fig. 3</span>
+              <h3 id="ribbon-title">The last year against the seasonal envelope</h3>
             </div>
+            <p class="what">Band = 1991–2020 seasonal 5th–95th percentile of the daily high; line = the past year. Dots mark flagged days.</p>
             <div class="chart-wrap" id="ribbon-chart"></div>
             <div class="legend" id="ribbon-legend"></div>
           </div>
 
-          <div class="card chart-card demoted" id="precip-card">
-            <div class="card-head">
-              <h2 id="precip-title">Daily precipitation, last year</h2>
-              <span class="what"
-                >Bars = daily totals; ochre = the seasonal wet-day 95th percentile
-                where defined. Solid bars are flagged heavy-rain days.</span
-              >
+          <div class="plate chart-card demoted" id="precip-card">
+            <div class="plate-head">
+              <span class="fig">Fig. 4</span>
+              <h3 id="precip-title">Daily precipitation, last year</h3>
             </div>
+            <p class="what">Bars = daily totals; ochre = the seasonal wet-day 95th percentile where defined. Solid bars are flagged heavy-rain days.</p>
             <div class="chart-wrap" id="precip-chart"></div>
             <div class="legend" id="precip-legend"></div>
           </div>
 
-          <div class="card chart-card demoted" id="events-card">
-            <div class="card-head">
-              <h2 id="events-title">All candidate events, last 3 years</h2>
-              <span class="what"
-                >Every flag, ranked by rarity. Click a row for the evidence and
-                validation status.</span
-              >
+          <div class="plate demoted" id="events-card">
+            <div class="plate-head">
+              <span class="fig">Fig. 5</span>
+              <h3 id="events-title">All candidate events, last 3 years</h3>
             </div>
-            <div class="card-body" style="overflow-x: auto">
+            <p class="what">Every flag, ranked by rarity. Click a row for the evidence and validation status.</p>
+            <div class="table-scroll">
               <table class="events-table" id="events-table">
                 <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Signal</th>
-                    <th>Value</th>
-                    <th class="hide-sm">Evidence</th>
-                    <th>Validation</th>
-                  </tr>
+                  <tr><th>Date</th><th>Signal</th><th>Value</th><th class="hide-sm">Evidence</th><th>Cross-check</th></tr>
                 </thead>
                 <tbody id="events-body"></tbody>
               </table>
@@ -203,103 +156,77 @@
           </div>
         </div>
       </section>
-    </main>
 
-    <section class="method-band" id="how-to-read">
-      <p class="eyebrow">How to read this</p>
-      <div class="guardrails">
-        <span class="chip">Seasonal anomaly screening — not climate attribution</span>
-        <span class="chip">Reanalysis estimates — not station observations</span>
-        <span class="chip">Grid-cell values — not whole districts</span>
-        <span class="chip warn">Every flag needs validation before public claims</span>
-      </div>
-      <div class="method-grid">
-        <div class="card method-card teal">
-          <div class="card-head"><h3>What a flag means</h3></div>
-          <div class="card-body">
+      <!-- method band -->
+      <section class="method-band" id="how-to-read">
+        <p class="chart-header">How to read this</p>
+        <details class="why">
+          <summary>Why does unseasonable weather matter?</summary>
+          <div class="why-body">
+            <p>
+              It is the timing, not just the heat or cold, that does the damage. A warm spell,
+              cold snap or downpour that arrives out of season catches everything built around
+              the normal calendar. This tool covers cities and towns; an out-of-season signal means:
+            </p>
             <ul>
-              <li>
-                Heat/cold flags: the day sat beyond the 95th/5th percentile of
-                ~150 comparable baseline days (same season, 1991–2020).
-              </li>
-              <li>Heavy precipitation uses wet days (≥1 mm) only — the WMO convention.</li>
-              <li>
-                Snow flags are amount-aware: rare-season occurrence, or an amount
-                beyond the seasonal 95th percentile of baseline snow days.
-              </li>
+              <li><b>Heat &amp; health.</b> Off-season heat hits people, hospitals and power grids before the summer routine — and its defences — are in place.</li>
+              <li><b>Water.</b> When Himalayan snow falls or melts out of season, it shifts river flow and reservoir planning downstream.</li>
+              <li><b>Floods &amp; hazards.</b> Unseasonal cloudbursts drive urban flooding; in the hills, landslides and avalanches on slopes that aren't braced for them.</li>
+              <li><b>The land around them.</b> Many grid cells take in nearby cropland, where off-season heat, cold or rain hits yields — a dedicated farm-region layer is planned, not yet built.</li>
             </ul>
           </div>
-        </div>
-        <div class="card method-card ochre">
-          <div class="card-head"><h3>Base rates are stated</h3></div>
-          <div class="card-body">
+        </details>
+        <div class="method-grid">
+          <div class="plate method-card teal">
+            <div class="plate-head"><h3>What a flag means</h3></div>
             <ul>
-              <li>
-                By construction ~10% of days breach a 90th percentile under a
-                1991–2020 climate. The signal is the excess above that, not the
-                count itself.
-              </li>
-              <li>
-                Rising heat exceedance largely reflects warming since the baseline
-                — that is the finding, not a defect.
-              </li>
+              <li>Temperature: the day sat beyond the seasonal 90th/95th (warm) or 10th/5th (cold) percentile of ~150 comparable baseline days — for daytime highs and nighttime lows both.</li>
+              <li>Heavy rain uses wet days (≥1 mm) only — the WMO convention.</li>
+              <li>Snow flags are amount-aware: rare-season occurrence, or an amount beyond the seasonal 95th percentile.</li>
             </ul>
           </div>
-        </div>
-        <div class="card method-card">
-          <div class="card-head"><h3>What this cannot say</h3></div>
-          <div class="card-body">
+          <div class="plate method-card ochre">
+            <div class="plate-head"><h3>Base rates are stated</h3></div>
+            <ul>
+              <li>By construction ~10% of days breach a 90th percentile even under a stable 1991–2020 climate. The signal is the excess above that, not the count itself.</li>
+              <li>Rising warm exceedance largely reflects warming since the baseline — that is the finding, not a defect.</li>
+            </ul>
+          </div>
+          <div class="plate method-card">
+            <div class="plate-head"><h3>What this cannot say</h3></div>
             <ul>
               <li>Whether climate change caused a specific event (attribution needs a different design).</li>
               <li>What an official IMD station recorded — ERA5 is a reanalysis estimate.</li>
               <li>Conditions across a whole district — each city is one grid cell.</li>
             </ul>
           </div>
+          <div class="plate method-card teal">
+            <div class="plate-head"><h3>Cross-checks &amp; validation</h3></div>
+            <div id="validation-detail" class="validation-detail"></div>
+          </div>
+          <div class="plate method-card navycard">
+            <div class="plate-head"><h3>Method &amp; AI-use note</h3></div>
+            <ul>
+              <li><b>Method.</b> ERA5/ERA5-Land daily values compared to the same season across 1991–2020 with ETCCDI percentile indices (leave-one-year-out inside the baseline). Cross-checked against NOAA station temperatures and IMD gauge rainfall; a sample is hand-checked against news/IMD. Fully reproducible from the code.</li>
+              <li><b>AI use.</b> Built by the author with an AI coding assistant (Claude) pair-programming the pipeline, charts and copy. Every threshold and claim was author-reviewed; the automated cross-checks exist so results rest on data, not on anyone's say-so.</li>
+            </ul>
+          </div>
         </div>
-      </div>
-      <div class="card method-card navycard">
-        <div class="card-head"><h3>Method &amp; AI-use note</h3></div>
-        <div class="card-body">
-          <ul>
-            <li>
-              <b>Method.</b> ERA5/ERA5-Land daily values compared to the same
-              season across 1991–2020 with ETCCDI percentile indices
-              (leave-one-year-out inside the baseline). Cross-checked against
-              NOAA station temperatures and IMD gauge rainfall; a sample is
-              hand-checked against news/IMD. Fully reproducible from the code.
-            </li>
-            <li>
-              <b>AI use.</b> Built by the author with an AI coding assistant
-              (Claude) pair-programming the pipeline, charts, and copy. Every
-              threshold and claim was author-reviewed; the automated station and
-              gauge cross-checks exist so results rest on data, not on anyone's
-              say-so.
-            </li>
-          </ul>
-        </div>
-      </div>
-      <p class="dek" style="margin-top: 14px">
-        Full methodology, source register, and validation log:
-        <a href="docs/methodology.md">methodology</a> ·
-        <a href="docs/source-register.md">sources</a> ·
-        <a href="docs/validation-register.json">validation register</a>
-      </p>
-    </section>
+        <p class="doc-links">
+          Full detail: <a href="docs/methodology.md">methodology</a> ·
+          <a href="docs/source-register.md">sources</a> ·
+          <a href="docs/validation-register.json">validation register</a>
+        </p>
+      </section>
+    </main>
 
     <footer class="footer">
-      <p class="footer-credit">
-        Built by <b>Sanchit Mardia</b> ·
-        <a href="https://github.com/smar98" target="_blank" rel="noopener">github.com/smar98</a> ·
-        <a href="https://github.com/smar98/unseasonable-weather-tracker" target="_blank" rel="noopener">source &amp; data</a>
-      </p>
-      <p>
-        <b>Sources.</b> ERA5 / ERA5-Land reanalysis (Hersbach et al. 2020) via the
-        Open-Meteo historical API; observed station data from NOAA ISD/GHCN via
-        Meteostat; IMD gridded rainfall (Pai et al. 2014); live conditions via the
-        Open-Meteo forecast API; basemap © OpenStreetMap contributors, © CARTO.
-        Indices follow the ETCCDI percentile family (Zhang et al. 2011) with
-        documented deviations. Reanalysis values are estimates, not station
-        observations.
+      <p class="footer-credit">Built by <span class="footer-name">Sanchit Mardia</span> · <a href="https://github.com/smar98" target="_blank" rel="noopener">github.com/smar98</a> · <a href="https://github.com/smar98/unseasonable-weather-tracker" target="_blank" rel="noopener">source &amp; data</a></p>
+      <p class="footer-src">
+        ERA5 / ERA5-Land reanalysis (Hersbach et al. 2020) via Open-Meteo; observed station data
+        from NOAA ISD/GHCN via Meteostat; IMD gridded rainfall (Pai et al. 2014); basemap
+        © OpenStreetMap contributors, © CARTO. Indices follow the ETCCDI percentile family
+        (Zhang et al. 2011). Reanalysis values are estimates, not station observations.
       </p>
     </footer>
 
@@ -312,6 +239,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="app.js?v=20260709-3"></script>
+    <script src="app.js?v=20260709-5"></script>
   </body>
 </html>
