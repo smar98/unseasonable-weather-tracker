@@ -50,7 +50,39 @@ This file records the intended source hierarchy and how each source should be us
 - Limitation: No snowfall variable via the Open-Meteo API; still far coarser
   than valley-scale variation.
 
+## Active Validation Sources (independent of ERA5)
+
+### NOAA ISD / GHCN-Daily station observations (via Meteostat)
+
+- URL: https://dev.meteostat.net/ (wraps https://www.ncei.noaa.gov/ ISD + GHCN-Daily)
+- Role: real observed daily station data — the temperature cross-check.
+- Current use: nearest station ≤35 km for 41 of 62 cities; each recent
+  heat/cold flag marked agree/differs vs ERA5 within 3 °C. ~88% agree.
+- Strength: genuine point measurements, free (CC-BY), no key, Actions-runnable.
+- Limitation: wind largely absent for India; hill/remote points (Leh,
+  Sonamarg, Joshimath, Manali) have no station; precip at stations is spotty
+  (so rain is checked via IMD instead).
+
+### IMD gridded daily rainfall (0.25°, Pai et al. 2014, via imdlib)
+
+- URL: https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html
+- Role: India-official, gauge-based rainfall — the heavy-rain cross-check.
+- Current use: each city's 0.25° cell, 2015–2025; every heavy_precip flag
+  marked agree/disagree vs IMD. ~45% confirmed (reanalysis rain is poorly
+  located at grid scale — stated as extra caution on rain flags).
+- Strength: independent of ERA5 (gauge-interpolated), covers all India incl.
+  no-station cities, free.
+- Limitation: rainfall only; archive ends 2025; underestimates in very wet
+  regions; not open-licensed (cite Pai et al. 2014, non-commercial restriction).
+
 ## Planned Validation Sources
+
+### IMD public API (api.imd.gov.in) — access requested July 2026
+
+- Role: potential station-level official actuals (temperature, rain, wind).
+- Intended use: if granted, supersedes the gridded rainfall layer for covered
+  cities and could add an official temperature/wind check — plugs into the same
+  per-event agreement slot. Pending access result.
 
 ### IMD Data Service Portal
 
