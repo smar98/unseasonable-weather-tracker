@@ -82,7 +82,7 @@ const state = {
   selectedId: null,
   map: null,
   markers: new Map(),
-  liveTimer: null,
+  leaderTab: "decade", // national leaderboard opens on the long-run view
 };
 
 /* ---------- null-safe DOM helpers (a render bug must never look like a
@@ -420,9 +420,6 @@ async function boot() {
   renderCityList("");
   initMap();
 
-  const search = byId("city-search");
-  if (search) search.addEventListener("input", () => renderCityList(search.value));
-
   const backdrop = byId("modal-backdrop");
   if (backdrop) {
     backdrop.addEventListener("click", (event) => {
@@ -754,7 +751,6 @@ async function selectCity(id) {
     renderPrecipChart(city);
     renderTopEvents(city);
     renderEvents(city);
-    scheduleLive(city);
   } catch (error) {
     if (status) {
       status.hidden = false;
@@ -995,6 +991,7 @@ function corroborationStatement(event) {
 function renderTape(city) {
   const svg = byId("tape");
   if (!svg) return;
+  setHtml("tape-label", `<b>${esc(city.meta.name)}</b> · daily record, last 365 days — coloured ticks are flagged days`);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
   const days = city.last_365;
   if (!days || !days.length) return;

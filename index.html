@@ -20,7 +20,7 @@
       integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260709-5" />
+    <link rel="stylesheet" href="styles.css?v=20260710-1" />
   </head>
   <body>
     <!-- masthead -->
@@ -34,7 +34,10 @@
 
     <!-- SIGNATURE: the instrument tape (selected city's last 365 days) -->
     <section class="tape-band" aria-label="Daily record, last 365 days">
-      <div class="tape-wrap"><svg id="tape" role="img" aria-label="One tick per day; coloured ticks are flagged days"></svg></div>
+      <div class="tape-wrap">
+        <div class="tape-label" id="tape-label">Daily record — pick a city below</div>
+        <svg id="tape" role="img" aria-label="One tick per day; coloured ticks are flagged days"></svg>
+      </div>
     </section>
 
     <!-- hero -->
@@ -44,10 +47,8 @@
       <p class="dek">
         Every day at 62 Indian cities, measured against the same season across
         1991–2020. Flags are screening signals to verify, not proof.
+        <a href="#national-card">See where India is unusual ↓</a>
       </p>
-      <form class="hero-search" id="hero-search" autocomplete="off" onsubmit="return false">
-        <input type="search" id="city-search" class="city-search" placeholder="Find your city — 62 tracked" aria-label="Search cities" />
-      </form>
     </section>
 
     <main>
@@ -55,7 +56,7 @@
       <section class="plate" id="national-card">
         <div class="plate-head">
           <span class="fig">Fig. 1</span>
-          <h2>Where India is running unusual</h2>
+          <h2>Where India is seeing unusual weather</h2>
         </div>
         <div class="national-grid">
           <div class="map-col">
@@ -94,7 +95,6 @@
           <p class="elev-note" id="city-elev"></p>
           <div class="kpi-note">Days in the past year outside the 1991–2020 seasonal normal, vs a normal year:</div>
           <div class="kpis" id="kpi-cards"></div>
-          <div class="live-strip" id="live-strip"></div>
 
           <!-- FIG. 2 — hero trend -->
           <div class="plate chart-card" id="trend-card">
@@ -139,11 +139,12 @@
             <div class="legend" id="precip-legend"></div>
           </div>
 
-          <div class="plate demoted" id="events-card">
-            <div class="plate-head">
+          <details class="plate demoted events-details" id="events-card">
+            <summary class="plate-head">
               <span class="fig">Fig. 5</span>
               <h3 id="events-title">All candidate events, last 3 years</h3>
-            </div>
+              <span class="details-cue" aria-hidden="true"></span>
+            </summary>
             <p class="what">Every flag, ranked by rarity. Click a row for the evidence and validation status.</p>
             <div class="table-scroll">
               <table class="events-table" id="events-table">
@@ -153,7 +154,7 @@
                 <tbody id="events-body"></tbody>
               </table>
             </div>
-          </div>
+          </details>
         </div>
       </section>
 
@@ -239,6 +240,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="app.js?v=20260709-5"></script>
+    <script src="app.js?v=20260710-1"></script>
   </body>
 </html>

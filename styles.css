@@ -193,6 +193,34 @@ button { font: inherit; color: inherit; }
   text-anchor: middle;
 }
 
+.tape-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--marginalia);
+  padding: 3px 2px 3px;
+  letter-spacing: 0.02em;
+}
+.tape-label b { color: var(--ink); font-weight: 600; }
+
+/* Fig. 5 as a disclosure */
+.events-details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.events-details > summary::-webkit-details-marker { display: none; }
+.events-details .details-cue {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--marginalia);
+}
+.events-details .details-cue::before { content: "▸ Show table"; }
+.events-details[open] .details-cue::before { content: "▾ Hide table"; }
+.events-details:not([open]) .what,
+.events-details:not([open]) .table-scroll { display: none; }
+.events-details > summary:hover .details-cue { color: var(--ink); }
+
 .tape-tip {
   position: absolute;
   top: 2px;
