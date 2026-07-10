@@ -263,13 +263,12 @@ function chartTakeaways(city) {
     trend = "How often each year runs outside the seasonal normal.";
   } else if (s.recentWarm >= 0.13) {
     trend =
-      `Warm days now fill about ${Math.round(s.recentWarm * 100)}% of the year — ` +
-      `roughly ${(s.recentWarm / 0.1).toFixed(1)}× the 10% the 1991–2020 baseline would give` +
+      `Warm days now fill about ${Math.round(s.recentWarm * 100)}% of the year — ${(s.recentWarm / 0.1).toFixed(1)}× the baseline rate of 10%` +
       (s.recentCold != null ? `, while cold nights have thinned to about ${Math.round(s.recentCold * 100)}%.` : ".");
   } else if (s.recentWarm <= 0.07) {
-    trend = "Warm days have grown rarer than the 10% the 1991–2020 baseline implies — this place is not running warmer against its own history.";
+    trend = "Warm days have grown rarer than the baseline rate of 10% — this place is not running warmer against its own history.";
   } else {
-    trend = "Both lines still hover near the 10% the 1991–2020 baseline implies — no clear long-run drift here.";
+    trend = "Warm days and cold nights both still hover near the baseline rate of 10% — no clear long-run drift here.";
   }
 
   // ribbon
@@ -288,25 +287,34 @@ function chartTakeaways(city) {
   const pm = kpiMeaning(k.heavy_precip_days || 0, k.heavy_precip_days_expected, "precip", NOTABLE_PRECIP);
   let precip;
   if (pm.tag === "unusual") {
-    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. Rain arrived unusually concentrated.`;
+    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. More downpours than a normal year.`;
   } else if (pm.tag === "quieter than normal") {
-    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. Fewer downpours than usual.`;
+    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. Fewer downpours than a normal year.`;
   } else {
-    precip = `${k.heavy_precip_days} heavy-rain days, ${pm.gap} — nothing unusual in how the rain fell.`;
+    precip = `${k.heavy_precip_days} heavy-rain days, ${pm.gap} — a normal number of downpours.`;
   }
 
-  // events
-  const vs = state.index.validation_summary;
-  const n = city.events.length;
+  // events — the collapsed Fig.5 summary is all a reader sees, so it must carry
+  // count + dominant type + this place's own cross-check (not a cross-city stat)
+  const evs = city.events || [];
+  const n = evs.length;
   let events;
   if (!n) {
     events = "No candidate events in the last three years.";
   } else {
+    const counts = {};
+    for (const e of evs) counts[e.category] = (counts[e.category] || 0) + 1;
+    const domCat = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    const domLabel = (FLAG_META[domCat]?.label || "unusual days").toLowerCase();
+    const checked = evs.filter(
+      (e) =>
+        e.observed?.status === "agree" ||
+        e.imd?.status === "agree" ||
+        ["validated", "corroborated"].includes(e.validation?.status)
+    ).length;
     events =
-      `${n} candidate ${n === 1 ? "event" : "events"} in three years` +
-      (vs && vs.checked
-        ? `. Across all cities, ${vs.checked} flags have been checked against independent evidence: ${vs.validated} validated, ${vs.corroborated} corroborated, ${vs.contradicted} contradicted.`
-        : ".");
+      `${n} candidate ${n === 1 ? "event" : "events"} in three years, mostly ${domLabel}` +
+      (checked ? `; ${checked} cross-checked against independent records.` : ".");
   }
 
   return { trend, ribbon, precip, events };
@@ -480,8 +488,14 @@ function renderNational() {
   const warmer = tones.filter((t) => t === "warm" || t === "swing").length;
   const cooler = tones.filter((t) => t === "cool").length;
   const decadeWarm = cities.filter((c) => (c.recent10_warm ?? 0) >= 0.13).length;
+  // Fig. 1's title carries this-year's finding; the paragraph carries the
+  // longer decade drift (so the two don't restate each other)
+  setText(
+    "national-title",
+    `${warmer} of ${n} places ran warmer than their seasonal normal this past year; ${cooler} ran cooler`
+  );
   const rows = [
-    `<p class="national-verdict">Over the past year, <b>${warmer} of ${n}</b> cities have been running warmer than their seasonal normal and <b>${cooler}</b> cooler; the rest sat near normal. Over the last decade, <b>${decadeWarm} of ${n}</b> show warm days rising above their 1991–2020 baseline.</p>`,
+    `<p class="national-verdict">Over the last decade, <b>${decadeWarm} of ${n}</b> places show warm days rising above their 1991–2020 baseline — the direction, almost everywhere at once, that a warming climate produces.</p>`,
   ];
   // one compressed trust line; the full cross-check breakdown lives in the
   // method band so Fig. 1 answers "where is India unusual" without a QA detour
@@ -497,7 +511,7 @@ function renderNational() {
   rows.push(renderLeaderboard());
   rows.push(
     `<details class="climate-note"><summary>Could this be a sign of climate change?</summary>` +
-    `<p>One unusual day, or one city, is weather — this tool never claims a single event was <em>caused</em> by climate change; that needs attribution modelling it doesn't do. But switch the ranking to <b>Decade</b>: across most cities, warm days now come far more often than the 1991–2020 baseline predicts, and cold nights less often. That direction — more warm extremes, fewer cold ones, almost everywhere at once — is the fingerprint of a warming climate. What you can see here is that drift; proving causation for any one event is a separate, harder question.</p></details>`
+    `<p>One unusual day, or one place, is weather — this tool never claims a single event was <em>caused</em> by climate change; that needs attribution modelling it doesn't do. But switch the ranking to <b>Decade</b>: across most places, warm days now come far more often than the 1991–2020 baseline predicts, and cold nights less often. That direction — more warm extremes, fewer cold ones, almost everywhere at once — is the fingerprint of a warming climate. What you can see here is that drift; proving causation for any one event is a separate, harder question.</p></details>`
   );
   rows.push(
     `<div class="row"><span style="color:var(--mist)">Reanalysis lag: data runs to ${fmtDate(recentEnd)}</span></div>`
@@ -563,7 +577,7 @@ function renderLeaderboard() {
             `<span class="leader-val">${cfg.fmt(cfg.value(c))}</span></li>`
         )
         .join("")
-    : `<li class="leader-empty">No cities flagged in this window.</li>`;
+    : `<li class="leader-empty">No places flagged in this window.</li>`;
   return (
     `<div class="leader"><div class="leader-tabs">${tabs}</div>` +
     `<p class="leader-caption">Where India is most unusual — ${cfg.caption}.</p>` +
@@ -582,7 +596,7 @@ function renderValidationDetail() {
   if (os && os.days_checked > 0) {
     const pct = Math.round((os.days_agree / os.days_checked) * 100);
     rows.push(
-      `<li><b>${pct}% temperature agreement.</b> ERA5's daily max &amp; min sit within ${os.tolerance_c}°C of the nearest weather station (NOAA ISD/GHCN) on ${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days measured — every overlapping day, not just flagged ones — across ${os.cities_with_station} of ${os.cities_total} cities with a station ≤35 km.</li>`
+      `<li><b>${pct}% temperature agreement.</b> ERA5's daily max &amp; min sit within ${os.tolerance_c}°C of the nearest weather station (NOAA ISD/GHCN) on ${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days measured — every overlapping day, not just flagged ones — across ${os.cities_with_station} of ${os.cities_total} places with a station ≤35 km.</li>`
     );
   }
   if (ir && ir.flags_checked > 0) {
@@ -620,7 +634,8 @@ function renderCityList(query) {
   }
   const parts = [];
   for (const [region, cities] of groups) {
-    parts.push(`<div class="region-label">${esc(region)}</div>`);
+    const soon = region === "Agricultural belts" ? ` <span class="rail-soon">crop layer · planned</span>` : "";
+    parts.push(`<div class="region-label">${esc(region)}${soon}</div>`);
     for (const city of cities) {
       const tone = cityTone(city.kpis);
       const color = TONE_COLOR[tone];
@@ -779,6 +794,11 @@ function renderHeader(city) {
       `not the town at ${Math.round(townElev)} m — in steep terrain, read it as the surrounding landscape.`;
   }
   setHtml("city-elev", elevNote);
+  // farm-belt places: say why a small town is in the index, and flag the planned layer
+  const agri = city.meta.region === "Agricultural belts"
+    ? "Included for the cropland around it. A crop-impact layer — what off-season weather means for the standing crop — is planned; for now the record reads the weather only."
+    : "";
+  setHtml("agri-note", agri);
 }
 
 const VERDICT_ICON = { warm: "▲", cool: "▼", calm: "•", swing: "↕", neutral: "•" };

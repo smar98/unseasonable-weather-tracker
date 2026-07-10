@@ -6,7 +6,7 @@
     <title>Unseasonable — India seasonal weather record</title>
     <meta
       name="description"
-      content="A synoptic record for 62 Indian cities: is today's weather unusual for this place and season? ERA5 reanalysis vs a 1991-2020 seasonal baseline, cross-checked against station and gauge data."
+      content="A synoptic record for 62 places across India — cities, hill towns and farm belts: is today's weather unusual for this place and season? ERA5 reanalysis vs a 1991-2020 seasonal baseline, cross-checked against station and gauge data."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,7 +20,7 @@
       integrity="sha256-p4NxAoJBhIINfQiqtdpplyoWf5BkwMJy7U8D3aPZ7+w="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260710-1" />
+    <link rel="stylesheet" href="styles.css?v=20260710-2" />
   </head>
   <body>
     <!-- masthead -->
@@ -35,18 +35,19 @@
     <!-- SIGNATURE: the instrument tape (selected city's last 365 days) -->
     <section class="tape-band" aria-label="Daily record, last 365 days">
       <div class="tape-wrap">
-        <div class="tape-label" id="tape-label">Daily record — pick a city below</div>
+        <div class="tape-label" id="tape-label">Daily record — pick a place below</div>
         <svg id="tape" role="img" aria-label="One tick per day; coloured ticks are flagged days"></svg>
       </div>
     </section>
 
     <!-- hero -->
     <section class="hero">
-      <p class="chart-header" id="hero-eyebrow">INDIA · 62 CITIES · DAILY RECORD SINCE 1960 · BASELINE 1991–2020</p>
+      <p class="chart-header" id="hero-eyebrow">INDIA · 62 PLACES · DAILY RECORD SINCE 1960 · BASELINE 1991–2020</p>
       <h1>Is this weather unusual for this place and time of year?</h1>
       <p class="dek">
-        Every day at 62 Indian cities, measured against the same season across
-        1991–2020. Flags are screening signals to verify, not proof.
+        Every day at 62 places across India — cities, hill towns, farm belts —
+        measured against the same season across 1991–2020. Flags are screening
+        signals to verify, not proof.
         <a href="#national-card">See where India is unusual ↓</a>
       </p>
     </section>
@@ -56,7 +57,7 @@
       <section class="plate" id="national-card">
         <div class="plate-head">
           <span class="fig">Fig. 1</span>
-          <h2>Where India is seeing unusual weather</h2>
+          <h2 id="national-title">Where India is seeing unusual weather</h2>
         </div>
         <div class="national-grid">
           <div class="map-col">
@@ -68,7 +69,7 @@
               <span class="key"><span class="dot" style="background:#aeb9bf"></span>Near normal</span>
             </div>
             <p class="map-note" id="map-note">
-              Each dot is a city, coloured by how its past year compares with its own 1991–2020 seasonal normal.
+              Each dot is one place, coloured by how its past year compares with its own 1991–2020 seasonal normal.
             </p>
           </div>
           <div class="national-col national" id="national-summary"></div>
@@ -76,14 +77,14 @@
       </section>
 
       <!-- city rail -->
-      <nav class="city-rail" aria-label="City index">
-        <span class="rail-label">Cities</span>
+      <nav class="city-rail" aria-label="Place index">
+        <span class="rail-label">Places</span>
         <div class="city-list" id="city-list"></div>
       </nav>
 
       <!-- the city record -->
       <section class="record" id="detail">
-        <div class="status-note" id="detail-status">Pick a city above to read its record.</div>
+        <div class="status-note" id="detail-status">Pick a place above to read its record.</div>
 
         <div id="city-header" hidden>
           <div class="city-head">
@@ -93,6 +94,7 @@
 
           <div class="verdict" id="city-verdict"></div>
           <p class="elev-note" id="city-elev"></p>
+          <p class="agri-note" id="agri-note"></p>
           <div class="kpi-note">Days in the past year outside the 1991–2020 seasonal normal, vs a normal year:</div>
           <div class="kpis" id="kpi-cards"></div>
 
@@ -198,7 +200,7 @@
             <ul>
               <li>Whether climate change caused a specific event (attribution needs a different design).</li>
               <li>What an official IMD station recorded — ERA5 is a reanalysis estimate.</li>
-              <li>Conditions across a whole district — each city is one grid cell.</li>
+              <li>Conditions across a whole district — each place is one grid cell.</li>
             </ul>
           </div>
           <div class="plate method-card teal">
@@ -240,6 +242,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="app.js?v=20260710-1"></script>
+    <script src="app.js?v=20260710-2"></script>
   </body>
 </html>
