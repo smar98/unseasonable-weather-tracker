@@ -213,7 +213,7 @@ function cityVerdict(city) {
 
   return {
     tone,
-    text: `${city.meta.name} ${headline} — ${counts}.${trend}${snow}`,
+    text: `${city.meta.name} ${headline}: ${counts}.${trend}${snow}`,
   };
 }
 
@@ -263,12 +263,12 @@ function chartTakeaways(city) {
     trend = "How often each year runs outside the seasonal normal.";
   } else if (s.recentWarm >= 0.13) {
     trend =
-      `Warm days now fill about ${Math.round(s.recentWarm * 100)}% of the year — ${(s.recentWarm / 0.1).toFixed(1)}× the baseline rate of 10%` +
+      `Warm days now fill about ${Math.round(s.recentWarm * 100)}% of the year, ${(s.recentWarm / 0.1).toFixed(1)}× the baseline rate of 10%` +
       (s.recentCold != null ? `, while cold nights have thinned to about ${Math.round(s.recentCold * 100)}%.` : ".");
   } else if (s.recentWarm <= 0.07) {
-    trend = "Warm days have grown rarer than the baseline rate of 10% — this place is not running warmer against its own history.";
+    trend = "Warm days have grown rarer than the baseline rate of 10%. This place is not running warmer against its own history.";
   } else {
-    trend = "Warm days and cold nights both still hover near the baseline rate of 10% — no clear long-run drift here.";
+    trend = "Warm days and cold nights both still hover near the baseline rate of 10%, with no clear long-run drift.";
   }
 
   // ribbon
@@ -276,7 +276,7 @@ function chartTakeaways(city) {
   const coldFlags = city.last_365.filter((d) => d.f && d.f.includes("cold_extreme")).length;
   let ribbon;
   if (hot === 0 && coldFlags === 0) {
-    ribbon = "No day in the past year broke the seasonal envelope — an unremarkable year, which the tool is built to say plainly.";
+    ribbon = "No day in the past year broke the seasonal envelope. An unremarkable year.";
   } else {
     ribbon =
       `The daily high left the 1991–2020 envelope on ${hot} unusually warm ` +
@@ -285,14 +285,7 @@ function chartTakeaways(city) {
 
   // precip
   const pm = kpiMeaning(k.heavy_precip_days || 0, k.heavy_precip_days_expected, "precip", NOTABLE_PRECIP);
-  let precip;
-  if (pm.tag === "unusual") {
-    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. More downpours than a normal year.`;
-  } else if (pm.tag === "quieter than normal") {
-    precip = `${k.heavy_precip_days} heavy-rain days — ${pm.gap}. Fewer downpours than a normal year.`;
-  } else {
-    precip = `${k.heavy_precip_days} heavy-rain days, ${pm.gap} — a normal number of downpours.`;
-  }
+  const precip = `${k.heavy_precip_days || 0} heavy-rain days, ${pm.gap}.`;
 
   // events — the collapsed Fig.5 summary is all a reader sees, so it must carry
   // count + dominant type + this place's own cross-check (not a cross-city stat)
@@ -305,7 +298,7 @@ function chartTakeaways(city) {
     const counts = {};
     for (const e of evs) counts[e.category] = (counts[e.category] || 0) + 1;
     const domCat = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-    const domLabel = (FLAG_META[domCat]?.label || "unusual days").toLowerCase();
+    const domLabel = (FLAG_META[domCat]?.label || "unusual days").toLowerCase().replace(/\b(day|night)$/, "$1s");
     const checked = evs.filter(
       (e) =>
         e.observed?.status === "agree" ||
@@ -495,7 +488,7 @@ function renderNational() {
     `${warmer} of ${n} places ran warmer than their seasonal normal this past year; ${cooler} ran cooler`
   );
   const rows = [
-    `<p class="national-verdict">Over the last decade, <b>${decadeWarm} of ${n}</b> places show warm days rising above their 1991–2020 baseline — the direction, almost everywhere at once, that a warming climate produces.</p>`,
+    `<p class="national-verdict">Over the last decade, <b>${decadeWarm} of ${n}</b> places show warm days rising above their 1991–2020 baseline, the direction a warming climate produces.</p>`,
   ];
   // one compressed trust line; the full cross-check breakdown lives in the
   // method band so Fig. 1 answers "where is India unusual" without a QA detour
@@ -511,7 +504,7 @@ function renderNational() {
   rows.push(renderLeaderboard());
   rows.push(
     `<details class="climate-note"><summary>Could this be a sign of climate change?</summary>` +
-    `<p>One unusual day, or one place, is weather — this tool never claims a single event was <em>caused</em> by climate change; that needs attribution modelling it doesn't do. But switch the ranking to <b>Decade</b>: across most places, warm days now come far more often than the 1991–2020 baseline predicts, and cold nights less often. That direction — more warm extremes, fewer cold ones, almost everywhere at once — is the fingerprint of a warming climate. What you can see here is that drift; proving causation for any one event is a separate, harder question.</p></details>`
+    `<p>One unusual day, or one place, is weather; attributing any single event to climate change needs modelling this tool doesn't do. But switch the ranking to <b>Decade</b>: across most places, warm days now come far more often than the 1991–2020 baseline predicts, and cold nights less often. That pattern, more warm extremes and fewer cold ones almost everywhere at once, is the fingerprint of a warming climate.</p></details>`
   );
   rows.push(
     `<div class="row"><span style="color:var(--mist)">Reanalysis lag: data runs to ${fmtDate(recentEnd)}</span></div>`
@@ -537,14 +530,14 @@ function renderNational() {
 const LEADER_TABS = {
   week: {
     label: "This week",
-    caption: "Most flagged days in the last 7 days of data",
+    caption: "Most flagged days in the last 7 days",
     value: (c) => c.flags_7d || 0,
     fmt: (v) => `${v} ${v === 1 ? "day" : "days"}`,
     ok: (c) => (c.flags_7d || 0) > 0,
   },
   month: {
     label: "This month",
-    caption: "Most flagged days in the last 30 days of data",
+    caption: "Most flagged days in the last 30 days",
     value: (c) => c.flags_30d || 0,
     fmt: (v) => `${v} ${v === 1 ? "day" : "days"}`,
     ok: (c) => (c.flags_30d || 0) > 0,
@@ -580,7 +573,7 @@ function renderLeaderboard() {
     : `<li class="leader-empty">No places flagged in this window.</li>`;
   return (
     `<div class="leader"><div class="leader-tabs">${tabs}</div>` +
-    `<p class="leader-caption">Where India is most unusual — ${cfg.caption}.</p>` +
+    `<p class="leader-caption">${cfg.caption}.</p>` +
     `<ol class="leader-list">${list}</ol></div>`
   );
 }
@@ -596,7 +589,7 @@ function renderValidationDetail() {
   if (os && os.days_checked > 0) {
     const pct = Math.round((os.days_agree / os.days_checked) * 100);
     rows.push(
-      `<li><b>${pct}% temperature agreement.</b> ERA5's daily max &amp; min sit within ${os.tolerance_c}°C of the nearest weather station (NOAA ISD/GHCN) on ${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days measured — every overlapping day, not just flagged ones — across ${os.cities_with_station} of ${os.cities_total} places with a station ≤35 km.</li>`
+      `<li><b>${pct}% temperature agreement.</b> ERA5's daily max &amp; min sit within ${os.tolerance_c}°C of the nearest weather station (NOAA ISD/GHCN) on ${os.days_agree.toLocaleString()} of ${os.days_checked.toLocaleString()} days measured, flagged and unflagged alike, across ${os.cities_with_station} of ${os.cities_total} places with a station ≤35 km.</li>`
     );
   }
   if (ir && ir.flags_checked > 0) {
@@ -790,13 +783,13 @@ function renderHeader(city) {
   let elevNote = "";
   if (cellElev != null && townElev != null && Math.abs(cellElev - townElev) > 300) {
     elevNote =
-      `These values describe the ERA5 grid cell at about <b>${Math.round(cellElev)} m</b>, ` +
-      `not the town at ${Math.round(townElev)} m — in steep terrain, read it as the surrounding landscape.`;
+      `These values describe the ERA5 grid cell at about <b>${Math.round(cellElev)} m</b> ` +
+      `rather than the town at ${Math.round(townElev)} m. In steep terrain, read it as the surrounding landscape.`;
   }
   setHtml("city-elev", elevNote);
   // farm-belt places: say why a small town is in the index, and flag the planned layer
   const agri = city.meta.region === "Agricultural belts"
-    ? "Included for the cropland around it. A crop-impact layer — what off-season weather means for the standing crop — is planned; for now the record reads the weather only."
+    ? "Included for the cropland around it. A crop-impact layer is planned; for now the record reads the weather only."
     : "";
   setHtml("agri-note", agri);
 }
@@ -954,16 +947,16 @@ function corroborationLines(event) {
   if (cat === "heavy_precip") {
     const m = event.imd;
     if (m && (m.status === "agree" || m.status === "disagree")) {
-      const word = m.status === "agree" ? "confirms heavy rain" : "shows little rain — treat with caution";
-      return `<div class="obs obs-${m.status}">IMD gauge rainfall ${m.rain_mm} mm vs ERA5 ${m.era5_mm} mm — ${word}</div>`;
+      const word = m.status === "agree" ? "confirms heavy rain" : "little rain at the gauge, treat with caution";
+      return `<div class="obs obs-${m.status}">IMD gauge rainfall ${m.rain_mm} mm vs ERA5 ${m.era5_mm} mm · ${word}</div>`;
     }
     if (m && m.status === "no_data") {
-      return `<div class="obs obs-none">IMD rainfall archive ends 2025 — not yet checkable</div>`;
+      return `<div class="obs obs-none">IMD rainfall archive ends 2025 · not yet checkable</div>`;
     }
     return "";
   }
   if (cat === "rare_snow" || cat === "exceptional_snow") {
-    return `<div class="obs obs-none">No independent source — no nearby station, and no gridded snow product exists</div>`;
+    return `<div class="obs obs-none">No independent source: no nearby station, no gridded snow product</div>`;
   }
   // temperature flags → nearest station
   const o = event.observed;
@@ -973,7 +966,7 @@ function corroborationLines(event) {
   }
   if (!o.var || o.var === "prcp") return "";
   const word = o.status === "agree" ? "agrees" : "differs";
-  return `<div class="obs obs-${o.status}">Station ${o.station_km} km: observed ${o.obs}°C vs ERA5 ${o.era5}°C — ${word}</div>`;
+  return `<div class="obs obs-${o.status}">Station ${o.station_km} km: observed ${o.obs}°C vs ERA5 ${o.era5}°C · ${word}</div>`;
 }
 
 // a full-sentence corroboration block for the modal, or "" if none applies
@@ -985,12 +978,12 @@ function corroborationStatement(event) {
       return `<div class="statement">IMD's gridded rainfall archive ends in 2025, so this ${event.date.slice(0, 4)} flag can't be cross-checked against gauges yet.</div>`;
     const agree = m.status === "agree";
     return `<div class="statement obs-statement obs-${m.status}"><b>IMD gauge rainfall ${agree ? "confirms this" : "does not confirm this"}.</b> ` +
-      `IMD's gauge-based grid recorded ${m.rain_mm} mm at this cell that day; ERA5 estimated ${m.era5_mm} mm — ` +
-      (agree ? "both saw a heavy-rain event." : "the gauges saw little rain, so treat this ERA5 flag with caution (reanalysis rain is often misplaced at grid scale).") +
+      `Its grid recorded ${m.rain_mm} mm at this cell; ERA5 estimated ${m.era5_mm} mm.` +
+      (agree ? "" : " Treat this flag with caution (reanalysis rain is often misplaced at grid scale).") +
       `</div>`;
   }
   if (cat === "rare_snow" || cat === "exceptional_snow") {
-    return `<div class="statement">No independent check is possible: this location has no nearby weather station, and no gauge or gridded <em>snow</em> product exists for India — so this flag rests on ERA5 alone.</div>`;
+    return `<div class="statement">No independent check is possible: this location has no nearby weather station, and no gauge or gridded <em>snow</em> product exists for India, so this flag rests on ERA5 alone.</div>`;
   }
   const o = event.observed;
   if (!o || !o.var || o.var === "prcp") return "";
@@ -998,8 +991,8 @@ function corroborationStatement(event) {
     return `<div class="statement">The nearest station (${o.station_km} km) has no reading for this day.</div>`;
   const agree = o.status === "agree";
   return `<div class="statement obs-statement obs-${o.status}"><b>Nearest weather station ${agree ? "agrees" : "differs"}.</b> ` +
-    `The station ${o.station_km} km away (${esc(o.station)}) observed ${o.obs}°C; ERA5 estimated ${o.era5}°C — ` +
-    (agree ? `within ${Math.abs(o.delta)}°C, so the estimate holds.` : `a ${Math.abs(o.delta)}°C gap, so treat this flag with caution.`) +
+    `The station ${o.station_km} km away (${esc(o.station)}) observed ${o.obs}°C; ERA5 estimated ${o.era5}°C, ` +
+    `a gap of ${Math.abs(o.delta)}°C${agree ? "." : "; treat this flag with caution."}` +
     `</div>`;
 }
 
@@ -1011,7 +1004,7 @@ function corroborationStatement(event) {
 function renderTape(city) {
   const svg = byId("tape");
   if (!svg) return;
-  setHtml("tape-label", `<b>${esc(city.meta.name)}</b> · daily record, last 365 days — coloured ticks are flagged days`);
+  setHtml("tape-label", `<b>${esc(city.meta.name)}</b> · daily record, last 365 days · coloured ticks are flagged days`);
   while (svg.firstChild) svg.removeChild(svg.firstChild);
   const days = city.last_365;
   if (!days || !days.length) return;
@@ -1545,20 +1538,20 @@ function openModal(event, city) {
   const newsQuery = encodeURIComponent(`"${cityName}" weather ${event.date}`);
   const worldview = `https://worldview.earthdata.nasa.gov/?v=${city.meta.longitude - 1.6},${city.meta.latitude - 1.2},${city.meta.longitude + 1.6},${city.meta.latitude + 1.2}&t=${event.date}&l=MODIS_Terra_CorrectedReflectance_TrueColor,MODIS_Terra_NDSI_Snow_Cover`;
 
-  const suggested = `ERA5 estimates ${meta.label.toLowerCase()} near ${cityName} on ${fmtDate(event.date)} (${event.value} ${event.unit}); ${evidenceStatement(event).toLowerCase()} (same-season 1991–2020 baseline). Reanalysis estimate — verify against station or satellite evidence.`;
+  const suggested = `ERA5 estimates ${meta.label.toLowerCase()} near ${cityName} on ${fmtDate(event.date)} (${event.value} ${event.unit}); ${evidenceStatement(event).toLowerCase()} (same-season 1991–2020 baseline). Reanalysis estimate; verify against station or satellite evidence.`;
 
   modal.innerHTML = `
     <button class="close-btn" id="modal-close">Close ✕</button>
     <span class="badge ${meta.cls}">${meta.label}</span>
     <h3>${esc(cityName)}, ${fmtDate(event.date)}</h3>
     <div class="when">${event.value != null ? `${event.value} ${esc(event.unit)}` : ""} · validation: <span class="badge ${validation.cls}">${validation.label}</span></div>
-    <div class="statement"><b>${esc(evidenceStatement(event))}</b> — same 5-day seasonal window across 1991–2020${event.date >= "1991" && event.date <= "2021" ? ", excluding the event's own year" : ""}.</div>
+    <div class="statement"><b>${esc(evidenceStatement(event))}</b> (same 5-day seasonal window across 1991–2020${event.date >= "1991" && event.date <= "2021" ? ", excluding the event's own year" : ""}).</div>
     ${corroborationStatement(event)}
     ${event.validation?.note ? `<div class="statement">${esc(event.validation.note)}${event.validation.evidence_url ? ` · <a href="${esc(event.validation.evidence_url)}" target="_blank" rel="noopener">evidence</a>` : ""}</div>` : ""}
     <div class="grid2">
       ${facts.map(([label, value]) => `<div class="fact"><div class="label">${esc(label)}</div><div class="val">${esc(value)}</div></div>`).join("")}
     </div>
-    <div class="caveat">This is a screening flag from reanalysis, not an observation. It says nothing about cause, and it describes one ~9–31 km grid cell, not a district. Before citing publicly, check at least one independent evidence tier below.</div>
+    <div class="caveat">This flag comes from reanalysis, a model estimate. It says nothing about cause, and it covers a single ~9–31 km grid cell. Before citing publicly, check at least one independent evidence tier below.</div>
     <p><b>Verify against:</b></p>
     <ul class="links">
       <li><a href="https://news.google.com/search?q=${newsQuery}" target="_blank" rel="noopener">News coverage around this date</a></li>
