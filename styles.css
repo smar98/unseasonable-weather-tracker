@@ -53,9 +53,12 @@
 
   --radius: 2px;
 
-  --font-display: "Archivo", system-ui, sans-serif;
-  --font-body: "Source Serif 4", Georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* -- one traditional workhorse sans (Lato) carries the whole page —
+     display/body/mono kept as three names only so the ~90 existing
+     call-sites below don't need touching; all three resolve identically. -- */
+  --font-display: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-body: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -81,7 +84,7 @@ body {
 a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--graticule); text-underline-offset: 2px; }
 a:hover { text-decoration-color: currentColor; }
 
-h1, h2, h3 { line-height: 1.2; margin: 0; font-family: var(--font-display); font-weight: 620; }
+h1, h2, h3 { line-height: 1.2; margin: 0; font-family: var(--font-display); font-weight: 700; }
 
 button { font: inherit; color: inherit; }
 
@@ -95,7 +98,7 @@ button { font: inherit; color: inherit; }
 .chart-header {
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--marginalia);
@@ -136,8 +139,6 @@ button { font: inherit; color: inherit; }
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 17px;
-  font-stretch: 125%;
-  font-variation-settings: "wdth" 125;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--ink);
@@ -162,7 +163,7 @@ button { font: inherit; color: inherit; }
 .gh-chip {
   font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   border: 1px solid var(--ink);
   border-radius: var(--radius);
   padding: 4px 12px;
@@ -196,7 +197,7 @@ button { font: inherit; color: inherit; }
 .rail-soon {
   font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: none;
   color: var(--ochre-ink, #8a5713);
@@ -225,7 +226,7 @@ button { font: inherit; color: inherit; }
   padding: 3px 2px 3px;
   letter-spacing: 0.02em;
 }
-.tape-label b { color: var(--ink); font-weight: 600; }
+.tape-label b { color: var(--ink); font-weight: 700; }
 
 /* Fig. 5 as a disclosure */
 .events-details > summary {
@@ -286,9 +287,7 @@ button { font: inherit; color: inherit; }
 
 .hero h1 {
   font-size: clamp(32px, 4.2vw, 46px);
-  font-weight: 640;
-  font-stretch: 110%;
-  font-variation-settings: "wdth" 110;
+  font-weight: 700;
   line-height: 1.08;
   letter-spacing: -0.008em;
   max-width: 24ch;
@@ -344,14 +343,12 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   margin-bottom: 4px;
 }
 
-/* figure titles are dynamic findings (whole sentences), so sentence case in
-   expanded Archivo — NOT the tracked all-caps of a short label */
+/* figure titles are dynamic findings (whole sentences), so sentence case —
+   NOT the tracked all-caps of a short label */
 .plate-head h2,
 .plate-head h3 {
   font-size: 16px;
-  font-weight: 620;
-  font-stretch: 112%;
-  font-variation-settings: "wdth" 112;
+  font-weight: 700;
   letter-spacing: -0.005em;
   line-height: 1.25;
   color: var(--ink);
@@ -361,7 +358,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .fig {
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--marginalia);
@@ -478,7 +475,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   font-size: 12.5px;
   color: var(--marginalia);
 }
-.national .row b { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.national .row b { color: var(--ink); font-weight: 700; white-space: nowrap; }
 
 .leader { margin: 4px 0 0; }
 
@@ -487,7 +484,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   flex: 1;
   font-family: var(--font-mono);
   font-size: 11.5px;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--marginalia);
   background: transparent;
   border: 1px solid var(--graticule);
@@ -519,12 +516,12 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   border: 1px solid var(--graticule);
   color: var(--marginalia);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   display: grid;
   place-items: center;
 }
 
-.leader-val { margin-left: auto; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.leader-val { margin-left: auto; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 .leader-empty { color: var(--ink-faint); font-family: var(--font-body); font-style: italic; font-size: 12.5px; }
 
 .climate-note {
@@ -536,7 +533,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   cursor: pointer;
   font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   list-style: none;
 }
@@ -566,7 +563,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .rail-label {
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--marginalia);
@@ -591,7 +588,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   flex-basis: 100%;
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -632,9 +629,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .city-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; padding: 10px 0 8px; }
 .city-head h2 {
   font-size: 30px;
-  font-weight: 640;
-  font-stretch: 112%;
-  font-variation-settings: "wdth" 112;
+  font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
@@ -670,7 +665,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   color: var(--marginalia);
 }
 .live-strip .live-tag {
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -696,7 +691,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(20px, 2.2vw, 26px);
-  font-weight: 540;
+  font-weight: 700;
   line-height: 1.4;
   color: var(--ink);
 }
@@ -745,7 +740,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .kpi .label {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--marginalia);
@@ -754,7 +749,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .kpi .value {
   font-family: var(--font-display);
   font-size: 34px;
-  font-weight: 720;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   margin: 2px 0 0;
   color: var(--ink);
@@ -771,7 +766,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   border-radius: var(--radius);
@@ -816,7 +811,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   max-width: 240px;
   z-index: 30;
 }
-.chart-tip .tip-date { font-weight: 600; }
+.chart-tip .tip-date { font-weight: 700; }
 .chart-tip .tip-muted { color: rgba(246, 248, 247, 0.7); }
 
 .axis-label { font-family: var(--font-mono); font-size: 11px; fill: var(--ink-faint); }
@@ -849,7 +844,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .event-card.snow { border-top-color: var(--mark-snow); }
 
 .event-card-top { display: flex; justify-content: space-between; gap: 8px; }
-.event-headline { margin: 0; font-family: var(--font-body); font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+.event-headline { margin: 0; font-family: var(--font-body); font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--ink); }
 .event-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--marginalia); }
 
 /* observed cross-check ("actuals") */
@@ -881,9 +876,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .record-divider span {
   font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 620;
-  font-stretch: 115%;
-  font-variation-settings: "wdth" 115;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -894,12 +887,12 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 
 .table-scroll { overflow-x: auto; }
 
-.events-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12.5px; }
+.events-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 .events-table th {
   text-align: left;
   font-size: 10.5px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--marginalia);
@@ -917,7 +910,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
   border-radius: var(--radius);
   padding: 2px 9px;
   white-space: nowrap;
@@ -972,7 +965,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 }
 .modal .close-btn:hover { border-color: var(--ink); color: var(--ink); }
 
-.modal h3 { font-size: 20px; font-weight: 640; margin: 4px 0 2px; color: var(--ink); }
+.modal h3 { font-size: 20px; font-weight: 700; margin: 4px 0 2px; color: var(--ink); }
 .modal .when { font-family: var(--font-mono); color: var(--marginalia); font-size: 12.5px; margin-bottom: 12px; }
 
 .statement {
@@ -988,8 +981,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 
 .modal .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
 .modal .fact { border: 1px solid var(--graticule); border-radius: var(--radius); padding: 8px 12px; }
-.modal .fact .label { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); }
-.modal .fact .val { font-family: var(--font-display); font-size: 15px; font-weight: 640; color: var(--ink); }
+.modal .fact .label { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); }
+.modal .fact .val { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--ink); }
 
 .modal .caveat {
   border-left: 3px solid var(--ochre);
@@ -1018,7 +1011,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   gap: 8px;
   font-family: var(--font-display);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
   list-style: none;
   padding: 8px 0;
@@ -1082,8 +1075,6 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 .footer-name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-stretch: 120%;
-  font-variation-settings: "wdth" 120;
 }
 
 .footer-src { font-family: var(--font-mono); font-size: 11.5px; color: var(--marginalia); line-height: 1.6; max-width: 90ch; }
