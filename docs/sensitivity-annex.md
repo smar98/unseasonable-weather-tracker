@@ -1,6 +1,6 @@
 # Sensitivity annex
 
-Generated 2026-07-08 by `scripts/sensitivity.py`. Question: do the headline results depend on the two main discretionary choices — seasonal window width and percentile estimator? Statistic: mean 2021–2025 warm-day fraction (share of days above the seasonal 90th percentile), and day-level agreement (Jaccard) of `hot_extreme` flags, against the primary configuration (±2 days, midrank percentiles).
+Generated 2026-07-08 by `scripts/sensitivity.py`. Question: do the headline results depend on the two main discretionary choices: seasonal window width and percentile estimator? Statistic: mean 2021–2025 warm-day fraction (share of days above the seasonal 90th percentile), and day-level agreement (Jaccard) of `hot_extreme` flags, against the primary configuration (±2 days, midrank percentiles).
 
 ## Window width (±2 days primary vs ±7 / ±10)
 
@@ -32,4 +32,4 @@ Generated 2026-07-08 by `scripts/sensitivity.py`. Question: do the headline resu
 
 ## Reading
 
-Observed pattern in the current run: the estimator choice is negligible (|Δ| ≤ 0.003, day-level agreement ≥ 0.90). Widening the window systematically *lowers* recent warm fractions by up to ~0.02 — a wider window blends more of the seasonal cycle into each pool, inflating its spread and raising thresholds in shoulder seasons — but under every configuration recent fractions remain well above the 0.10 null and the ordering of cities is unchanged. The headline conclusions do not flip. Day-level hot-flag agreement of 0.66–0.82 across windows means individual borderline flags DO depend on the window choice; this is why the UI shows each event's full rank statement rather than a bare binary flag. Axes not yet examined: ERA5 vs era5_seamless source (requires re-fetch), and wet-day pool minimums.
+Observed pattern in the current run: the estimator choice is negligible (|Δ| ≤ 0.003, day-level agreement ≥ 0.90). Widening the window systematically *lowers* recent warm fractions by up to ~0.02 (a wider window blends more of the seasonal cycle into each pool, inflating its spread and raising thresholds in shoulder seasons), but under every configuration recent fractions remain well above the 0.10 null and the ordering of cities is unchanged. The headline conclusions do not flip. Day-level hot-flag agreement of 0.66–0.82 across windows means individual borderline flags DO depend on the window choice; this is why the UI shows each event's full rank statement rather than a bare binary flag. Axes not yet examined: ERA5 vs era5_seamless source (requires re-fetch), and wet-day pool minimums.

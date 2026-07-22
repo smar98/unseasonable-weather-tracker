@@ -8,16 +8,16 @@ This file records the intended source hierarchy and how each source should be us
 
 - URL: https://open-meteo.com/en/docs/historical-weather-api
 - Role: API access layer for ERA5/ERA5-Land/IFS data.
-- Current use: model `era5_seamless` — ERA5-Land (~9 km) blended with ERA5
-  (~31 km) — for daily tmax/tmin/precipitation; snowfall falls back to ERA5
-  because ERA5-Land exposes no snowfall variable through this API (verified
-  empirically, July 2026: `snowfall_sum` is null from `era5_land` in both
-  winter and summer test windows).
+- Current use: model `era5_seamless`, which blends ERA5-Land (~9 km) with
+  ERA5 (~31 km), for daily tmax/tmin/precipitation; snowfall falls back to
+  ERA5 because ERA5-Land exposes no snowfall variable through this API
+  (verified empirically, July 2026: `snowfall_sum` is null from `era5_land`
+  in both winter and summer test windows).
 - Strength: Easy reproducibility; no key required for non-commercial prototyping.
-- Limitation: API wrapper, not the original data archive; temperature is
+- Limitation: an API wrapper over the original data archive; temperature is
   statistically downscaled to a ~90 m elevation model but precipitation and
-  snowfall are not; rate-limited (call-weighted), which the pipeline's backoff
-  respects. Model output should be cited as reanalysis estimates.
+  snowfall are not; rate-limited (call-weighted), which the pipeline's
+  backoff respects. Model output should be cited as reanalysis estimates.
 
 ### Open-Meteo Forecast API
 
@@ -25,7 +25,7 @@ This file records the intended source hierarchy and how each source should be us
 - Role: Live/near-live forecast and nowcast access layer.
 - Current use: Browser-side current temperature, precipitation, snowfall, weather code, and wind speed.
 - Strength: No API key required for prototyping; supports public static dashboard deployment.
-- Limitation: Forecast/nowcast estimate, not official station observation. It should not overwrite the historical anomaly layer.
+- Limitation: a forecast/nowcast model estimate. It should not overwrite the historical anomaly layer.
 
 ### ERA5
 
@@ -55,7 +55,7 @@ This file records the intended source hierarchy and how each source should be us
 ### NOAA ISD / GHCN-Daily station observations (via Meteostat)
 
 - URL: https://dev.meteostat.net/ (wraps https://www.ncei.noaa.gov/ ISD + GHCN-Daily)
-- Role: real observed daily station data — the temperature cross-check.
+- Role: real observed daily station data (the temperature cross-check).
 - Current use: nearest station ≤35 km for 41 of 62 cities; each recent
   heat/cold flag marked agree/differs vs ERA5 within 3 °C. ~88% agree.
 - Strength: genuine point measurements, free (CC-BY), no key, Actions-runnable.
@@ -66,10 +66,10 @@ This file records the intended source hierarchy and how each source should be us
 ### IMD gridded daily rainfall (0.25°, Pai et al. 2014, via imdlib)
 
 - URL: https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html
-- Role: India-official, gauge-based rainfall — the heavy-rain cross-check.
+- Role: India-official, gauge-based rainfall (the heavy-rain cross-check).
 - Current use: each city's 0.25° cell, 2015–2025; every heavy_precip flag
   marked agree/disagree vs IMD. ~45% confirmed (reanalysis rain is poorly
-  located at grid scale — stated as extra caution on rain flags).
+  located at grid scale; stated as extra caution on rain flags).
 - Strength: independent of ERA5 (gauge-interpolated), covers all India incl.
   no-station cities, free.
 - Limitation: rainfall only; archive ends 2025; underestimates in very wet
@@ -77,11 +77,11 @@ This file records the intended source hierarchy and how each source should be us
 
 ## Planned Validation Sources
 
-### IMD public API (api.imd.gov.in) — access requested July 2026
+### IMD public API (api.imd.gov.in): access requested July 2026
 
 - Role: potential station-level official actuals (temperature, rain, wind).
 - Intended use: if granted, supersedes the gridded rainfall layer for covered
-  cities and could add an official temperature/wind check — plugs into the same
+  cities and could add an official temperature/wind check; it plugs into the same
   per-event agreement slot. Pending access result.
 
 ### IMD Data Service Portal

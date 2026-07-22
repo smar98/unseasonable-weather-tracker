@@ -1,5 +1,5 @@
 {
-  "description": "Manual validation register. event_id = <city_id>:<date>:<category>. Status: validated (independent observation confirms the condition), corroborated (credible news/forecast consistent, no official measurement), unverified (searched, no public record found \u2014 an honest null, not a failure), contradicted (independent evidence disagrees). Events absent from this file are simply not yet researched. Misses and nulls are kept visible: this is the tool's published evidence log. As of 2026-07-08, 51 events checked across 19 cities: 5 validated, 20 corroborated, 26 no public record, 0 contradicted. Station readings quoted in press differ from ERA5 grid-cell values by 1\u20135 units in several cases; that is the documented station-vs-grid-cell discrepancy, not contradiction.",
+  "description": "Manual validation register. event_id = <city_id>:<date>:<category>. Status: validated (independent observation confirms the condition), corroborated (credible news/forecast consistent, no official measurement), unverified (searched, no public record found; an honest null), contradicted (independent evidence disagrees). Events absent from this file are simply not yet researched. Misses and nulls are kept visible: this is the tool's published evidence log. As of 2026-07-08, 51 events checked across 19 cities: 5 validated, 20 corroborated, 26 no public record, 0 contradicted. Station readings quoted in press differ from ERA5 grid-cell values by 1\u20135 units in several cases; that is the documented station-vs-grid-cell discrepancy rather than contradiction.",
   "updated": "2026-07-08",
   "events": [
     {
@@ -12,7 +12,7 @@
     {
       "event_id": "sonamarg:2026-01-23:heavy_precip",
       "status": "corroborated",
-      "note": "Media India (Jan 2026): same Jan 22-23 storm \u2014 'snowfall, avalanches strike Sonamarg', roads blocked, avalanche burying buildings/vehicles; consistent with a very heavy precipitation day (no separate mm measurement found).",
+      "note": "Media India (Jan 2026): same Jan 22-23 storm: 'snowfall, avalanches strike Sonamarg', roads blocked, avalanche burying buildings/vehicles; consistent with a very heavy precipitation day (no separate mm measurement found).",
       "evidence_url": "https://mediaindia.eu/tourism/snowfall-avalanches-strike-sonamarg-and-uttarakhand-roads-blocked/",
       "checked": "2026-07-08"
     },
@@ -26,7 +26,7 @@
     {
       "event_id": "sonamarg:2025-08-26:rare_snow",
       "status": "corroborated",
-      "note": "Deccan Herald (Aug 31, 2025): 'rare late-summer weather event' \u2014 Sonamarg and Zojila 'received nearly a foot of snow'; residents worried about premature snow onset. Matches the flagged late-August unseasonal snow episode.",
+      "note": "Deccan Herald (Aug 31, 2025): 'rare late-summer weather event': Sonamarg and Zojila 'received nearly a foot of snow'; residents worried about premature snow onset. Matches the flagged late-August unseasonal snow episode.",
       "evidence_url": "https://www.deccanherald.com/india/jammu-and-kashmir/kashmirs-summer-turns-magical-sonamarg-zojila-covered-in-snow-3705420",
       "checked": "2026-07-08"
     },
@@ -60,7 +60,7 @@
     {
       "event_id": "bhopal:2025-08-15:hot_extreme",
       "status": "corroborated",
-      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly \u2014 a seasonal-percentile exceedance, not a newsworthy heatwave.",
+      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly: a seasonal-percentile exceedance rather than a newsworthy heatwave.",
       "evidence_url": "https://www.freepressjournal.in/bhopal/madhya-pradesh-august-13-2025-weather-update-79-rainfall-in-state-drought-hits-indore-ujjain-while-heavy-rain-alerts-for-several-districts-today",
       "checked": "2026-07-08"
     },
@@ -192,7 +192,7 @@
     {
       "event_id": "chandigarh:2024-05-02:cold_extreme",
       "status": "unverified",
-      "note": "A subagent proposed 'contradicted' from May-2024 being rainless with 46\u00b0C peak heat, but the flag is a cool NIGHT: our data has 2 May 2024 at min 15.5\u00b0C / max 33.4\u00b0C / 0mm \u2014 a clear dry night, not rain-cooled, and consistent with a pre-heatwave airmass. No direct evidence on the night min itself, so recorded as no-public-record rather than contradicted.",
+      "note": "A subagent proposed 'contradicted' from May-2024 being rainless with 46\u00b0C peak heat, but the flag is a cool NIGHT: our data has 2 May 2024 at min 15.5\u00b0C / max 33.4\u00b0C / 0mm: a clear dry night rather than rain-cooled, and consistent with a pre-heatwave airmass. No direct evidence on the night min itself, so recorded as no-public-record rather than contradicted.",
       "checked": "2026-07-08"
     },
     {
@@ -250,7 +250,7 @@
     {
       "event_id": "chennai:2026-05-12:cold_extreme",
       "status": "corroborated",
-      "note": "IMD Chennai's extended-range bulletin shows Tamil Nadu at large rainfall excess for 7\u201313 May 2026 with rain on 9\u201313 May, consistent with a rain-suppressed cool max ~12 May (sub-division, not station level).",
+      "note": "IMD Chennai's extended-range bulletin shows Tamil Nadu at large rainfall excess for 7\u201313 May 2026 with rain on 9\u201313 May, consistent with a rain-suppressed cool max ~12 May (sub-division rather than station level).",
       "checked": "2026-07-08",
       "evidence_url": "https://mausam.imd.gov.in/chennai/mcdata/erf.pdf"
     },
@@ -282,7 +282,7 @@
     {
       "event_id": "guwahati:2023-10-03:heavy_precip",
       "status": "unverified",
-      "note": "Searched; the well-documented 3\u20135 Oct 2023 disaster was the Sikkim GLOF / North Bengal floods ~500km away, which does not match Guwahati \u2014 so no corroboration claimed.",
+      "note": "Searched; the well-documented 3\u20135 Oct 2023 disaster was the Sikkim GLOF / North Bengal floods ~500km away, which does not match Guwahati, so no corroboration claimed.",
       "checked": "2026-07-08"
     },
     {
