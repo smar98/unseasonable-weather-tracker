@@ -6,7 +6,7 @@
     <title>Unseasonable · India seasonal weather record</title>
     <meta
       name="description"
-      content="Is today's weather unusual for this place and season? Daily records for 62 Indian cities, hill towns and farm belts: ERA5 reanalysis vs a 1991-2020 seasonal baseline, cross-checked against station and gauge data."
+      content="Is today's weather unusual for this place and season? Daily records for 62 Indian cities, hill towns and farm belts: ERA5 reanalysis vs a 1991–2020 seasonal baseline, cross-checked against station and IMD gridded rainfall data."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,7 +32,7 @@
       <a class="gh-chip" href="https://github.com/smar98/unseasonable-weather-tracker" target="_blank" rel="noopener">GitHub</a>
     </header>
 
-    <!-- SIGNATURE: the instrument tape (selected city's last 365 days) -->
+    <!-- instrument tape: selected city's last 365 days -->
     <section class="tape-band" aria-label="Daily record, last 365 days">
       <div class="tape-wrap">
         <div class="tape-label" id="tape-label">Daily record · pick a place below</div>
@@ -53,7 +53,7 @@
     </section>
 
     <main>
-      <!-- FIG. 1 — national view -->
+      <!-- FIG. 1: national view -->
       <section class="plate" id="national-card">
         <div class="plate-head">
           <span class="fig">Fig. 1</span>
@@ -98,13 +98,13 @@
           <div class="kpi-note">Days in the past year outside the 1991–2020 seasonal normal, vs a normal year:</div>
           <div class="kpis" id="kpi-cards"></div>
 
-          <!-- FIG. 2 — hero trend -->
+          <!-- FIG. 2: hero trend -->
           <div class="plate chart-card" id="trend-card">
             <div class="plate-head">
               <span class="fig">Fig. 2</span>
               <h3 id="trend-title">Days outside the seasonal normal, 1960–present</h3>
             </div>
-            <p class="what">Share of days each year beyond the 1991–2020 seasonal 90th/10th percentiles; 9-year mean, annual faint; dashed line = the ~10% expected under the baseline.</p>
+            <p class="what">Share of days each year beyond the 1991–2020 seasonal 90th/10th percentiles; 9-year mean in bold, single years faint; dashed line = the ~10% expected under the baseline.</p>
             <div class="chart-wrap" id="trend-chart"></div>
             <div class="legend" id="trend-legend"></div>
           </div>
@@ -167,15 +167,15 @@
           <summary>Why does unseasonable weather matter?</summary>
           <div class="why-body">
             <p>
-              Timing does the damage as much as intensity. A warm spell, cold snap or downpour
+              Timing can matter as much as intensity. A warm spell, cold snap or downpour
               that arrives out of season catches everything built around the normal calendar.
               A signal here can mean:
             </p>
             <ul>
-              <li><b>Heat &amp; health.</b> Off-season heat hits people, hospitals and power grids before summer defences are in place.</li>
-              <li><b>Water.</b> Off-season Himalayan snowfall or melt shifts river flow and reservoir planning downstream.</li>
-              <li><b>Floods &amp; hazards.</b> Unseasonal cloudbursts drive urban flooding; in the hills, landslides and avalanches on slopes that aren't braced for them.</li>
-              <li><b>The land around them.</b> Many grid cells take in nearby cropland, where off-season heat, cold or rain hits yields. A crop layer is planned but not yet built.</li>
+              <li><b>Heat &amp; health.</b> Off-season heat can hit people, hospitals and power grids before summer defences are in place.</li>
+              <li><b>Water.</b> Off-season Himalayan snowfall or melt can shift river flow and reservoir planning downstream.</li>
+              <li><b>Floods &amp; hazards.</b> Unseasonable heavy rain can cause urban flooding; in the hills, landslides and avalanches on slopes that aren't braced for them.</li>
+              <li><b>The land around them.</b> Many grid cells take in nearby cropland, where off-season heat, cold or rain can hit yields.</li>
             </ul>
           </div>
         </details>
@@ -184,15 +184,15 @@
             <div class="plate-head"><h3>What a flag means</h3></div>
             <ul>
               <li>Temperature: the day sat beyond the seasonal 90th/95th (warm) or 10th/5th (cold) percentile of ~150 comparable baseline days, for daytime highs and nighttime lows both.</li>
-              <li>Heavy rain uses wet days (≥1 mm) only, per the WMO convention.</li>
+              <li>Heavy rain uses wet days (≥1 mm) only, per the ETCCDI convention.</li>
               <li>Snow flags are amount-aware: rare-season occurrence, or an amount beyond the seasonal 95th percentile.</li>
             </ul>
           </div>
           <div class="plate method-card ochre">
             <div class="plate-head"><h3>Base rates are stated</h3></div>
             <ul>
-              <li>By construction ~10% of days breach a 90th percentile even under a stable 1991–2020 climate. The signal is the excess above that baseline rate.</li>
-              <li>Rising warm exceedance largely reflects warming since the baseline. That is what the tool measures.</li>
+              <li>By construction ~10% of days breach a 90th percentile of the 1991–2020 baseline, even in a year that matches it. The signal is the excess above that rate.</li>
+              <li>A rising warm-exceedance share means temperatures have moved up relative to the baseline. The tool does not say why.</li>
             </ul>
           </div>
           <div class="plate method-card">
@@ -210,7 +210,7 @@
           <div class="plate method-card navycard">
             <div class="plate-head"><h3>Method &amp; AI-use note</h3></div>
             <ul>
-              <li><b>Method.</b> ERA5/ERA5-Land daily values compared to the same season across 1991–2020 with ETCCDI percentile indices (leave-one-year-out inside the baseline). Cross-checked against NOAA station temperatures and IMD gauge rainfall; a sample is hand-checked against news/IMD. Fully reproducible from the code.</li>
+              <li><b>Method.</b> ERA5/ERA5-Land daily values compared to the same season across 1991–2020 with ETCCDI percentile indices (leave-one-year-out inside the baseline). Cross-checked against NOAA station temperatures and IMD gridded rainfall; a sample is hand-checked against news/IMD. Code and cached data are public.</li>
               <li><b>AI use.</b> Built by the author with an AI coding assistant (Claude) pair-programming the pipeline, charts and copy. Every threshold and claim was author-reviewed; the automated cross-checks mean results rest on checkable data.</li>
             </ul>
           </div>

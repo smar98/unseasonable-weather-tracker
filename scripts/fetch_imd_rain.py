@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fetch IMD gridded daily rainfall (0.25°, Pai et al. 2014) and extract the
-nearest grid cell for each city — an independent, India-official rainfall
+nearest grid cell for each city: an independent, India-official rainfall
 source to cross-check ERA5's heavy-rain flags.
 
 IMD gridded rainfall is interpolated from IMD's gauge network (station-based,
-not a model), so it is genuinely independent of ERA5 reanalysis. It covers the
-whole country — including cities with no NOAA station — but only rainfall, and
+not a model), so it is independent of ERA5 reanalysis. It covers the
+whole country, including cities with no NOAA station, but only rainfall, and
 the archive currently ends in 2025. Downloaded free via the imdlib package
 (imdpune.gov.in). Cite: Pai et al. (2014), MAUSAM 65(1). Writes
 imd_cache/<city_id>.csv.gz (date, rain_mm).
@@ -69,7 +69,7 @@ def main() -> int:
             try:
                 data = imd.get_data("rain", year, year, fn_format="yearwise", file_dir=tmp)
                 ds = data.get_xarray()
-            except Exception as error:  # a year not yet published (e.g. current year) — skip
+            except Exception as error:  # a year not yet published (e.g. current year); skip
                 print(f"  {year}: unavailable ({str(error)[:60]})", file=sys.stderr)
                 continue
             times = [str(t)[:10] for t in ds.time.values]

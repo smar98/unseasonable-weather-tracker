@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Correctness tests for the anomaly pipeline (scripts/build_dataset.py).
 
-These prove the load-bearing science does what docs/methodology.md claims —
+These check that the code does what docs/methodology.md describes:
 midrank percentiles, leave-one-year-out, the wet-day precip convention, the
-snow rule (the exact v1 defect that never fired), unbiasedness of the flag
+snow rule (snow must flag in a season where it is rare), unbiasedness of the flag
 rate, and the observed-agreement logic. Run: `pytest tests/` or
 `python3 tests/test_pipeline.py`.
 """
@@ -170,10 +170,8 @@ def test_inverse_flags_warm_night_and_cold_day():
     assert ds["kpis"]["warm_nights"] >= 1 and ds["kpis"]["cold_days"] >= 1
 
 
-def test_snow_rule_regression_common_vs_rare_season():
-    """The v1 bug: the snow flag never fired. It must fire for snow in a season
-    where snow is rare (<=5% baseline), and must NOT fire in a season where snow
-    is common — regardless of amount."""
+def test_snow_rule_common_vs_rare_season():
+    """Snow must flag in a season where snow is rare (<=5% baseline), and must NOT fire in a season where snow is common, regardless of amount."""
     rng = random.Random(7)
     recs = make_records(rng, snow_profile=True)
     for r in recs:
@@ -186,7 +184,7 @@ def test_snow_rule_regression_common_vs_rare_season():
     jan = day_flags(ds, "2024-01-15") or []
     oct_ = day_flags(ds, "2024-10-15") or []
     assert "rare_snow" not in jan, "snow in a snowy month must NOT be 'rare-season'"
-    assert "rare_snow" in oct_, "snow in a snow-free month MUST flag (the v1 regression)"
+    assert "rare_snow" in oct_, "snow in a snow-free month must flag"
 
 
 def test_flag_rate_is_unbiased_in_baseline():

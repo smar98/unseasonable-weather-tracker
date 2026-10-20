@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Match each city to its nearest usable observed weather station (Meteostat,
-which wraps NOAA ISD + GHCN-Daily). Writes scripts/stations.json — a reviewed,
+which wraps NOAA ISD + GHCN-Daily). Writes scripts/stations.json: a reviewed,
 committed mapping so the pipeline never re-queries the station network at
 build time. A city with no current station within MAX_KM is single-source
 (ERA5 only) and recorded as null."""

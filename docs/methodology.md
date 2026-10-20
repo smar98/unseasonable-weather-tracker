@@ -31,7 +31,7 @@ The tool deliberately does **not** answer:
 - **Historical daily values:** Open-Meteo archive API, model `era5_seamless`:
   ERA5-Land (~9 km; Muñoz-Sabater et al. 2021) blended with ERA5 (~31 km;
   Hersbach et al. 2020). Snowfall comes from ERA5 only, because ERA5-Land does
-  not expose a snowfall variable through this API (verified empirically:
+  not expose a snowfall variable through this API (checked July 2026:
   ERA5-Land returns nulls for `snowfall_sum` in both summer and winter).
 - **Variables:** daily maximum and minimum 2 m temperature, daily precipitation
   sum, daily snowfall sum. Daily aggregation in `Asia/Kolkata`.
@@ -98,23 +98,14 @@ Notes:
 - **Wet-day convention.** Precipitation percentiles are computed over wet days
   (≥1 mm) only, following the ETCCDI convention. Computing them over all days
   would inflate dry-climate flags: in a desert cell most days are zero, so any
-  modest rain lands in the extreme tail of the all-days distribution. (This was
-  a defect of v1 of this tool; Leh showed 85 spurious "heavy precipitation"
-  days.)
+  modest rain lands in the extreme tail of the all-days distribution.
 - **Seasonal vs annual R95p.** ETCCDI's R95p uses a single annual wet-day 95th
   percentile. In monsoon climates that threshold is set almost entirely by
   monsoon-season rain, so unseasonable dry-season rain can never register. We
   therefore use a *seasonal* wet-day percentile as the primary flag (a
   documented deviation) and additionally report annual `r95p_days` per year
   for direct comparability with published ETCCDI products.
-- **Snow flags are amount-aware and threshold-transparent.** v1 used a single
-  composite score (weighted rarity + amount) that never fired in 3.5 years of
-  data; diagnosis showed both that ERA5 grid cells in the high Himalaya treat
-  trace summer snow as climatologically common, and that binary occurrence
-  rarity ignores record amounts. v2 separates the two questions: "does it snow
-  at all in this season?" (`rare_snow`) and "is this amount exceptional for
-  this season?" (`exceptional_snow`). The ≥1 cm floor excludes ERA5 trace-snow
-  noise. Snow flags are only computed for cities with ≥30 baseline snow days.
+- **Snow flags are amount-aware and threshold-transparent.** They ask two separate questions: does it snow at all in this season (`rare_snow`), and is this amount exceptional for this season (`exceptional_snow`). The ≥1 cm floor excludes ERA5 trace-snow noise. Snow flags are only computed for cities with ≥30 baseline snow days.
 - **Pool minimums.** Percentile flags that would rest on fewer than 15
   comparable baseline days are not issued; the UI reports the threshold as
   undefined instead. A rarity claim needs a denominator that can support it.
@@ -137,13 +128,7 @@ count itself.** Empirical check: across the 1991–2020 baseline years
 (leave-one-year-out), the realised warm-day fraction is ~0.10, confirming the
 machinery is unbiased.
 
-The dominant excess in recent years is warm-side exceedance: 2021–2025
-warm-day fractions run 1.5–2× the null at most cities. That is the expected
-signature of warming since the baseline period, and the tool presents it as
-the finding of the trend view. It is not "contamination"; it is what a fixed
-baseline measures. Contrast: Climate Central's Climate Shift Index makes the
-same trend the explicit object via attribution ensembles; this tool stays at
-screening level and says only "outside the 1991–2020 seasonal normal."
+In 2021–2025, 32 of 62 cities have a mean warm-day fraction at or above the 0.10 null, and 12 are at or above 0.15. A fixed baseline measures this exceedance directly. The analysis does not attribute exceedance to climate change (see §1).
 
 ## 7. Evidence ladder and validation register
 
@@ -155,11 +140,8 @@ Evidence tiers, strongest first:
 4. Forecast/nowcast (this tool's live strip)
 5. Media/social reports (corroboration only)
 
-Every flagged event carries a validation status from
-`docs/validation-register.json`: **validated / corroborated / unverified /
-contradicted**. Register entries link evidence. Contradicted flags are kept
-visible: the register doubles as the tool's published false-positive log, and
-the hit rate of a validated sample is reported rather than implied.
+Each flagged event carries a validation status from `docs/validation-register.json`: **validated / corroborated / unverified / contradicted**. Events not yet researched are marked `not_checked`. Register entries link evidence. Contradicted flags are kept
+visible: the register doubles as the tool's published false-positive log. Its counts are 51 events checked, 5 validated, 20 corroborated, 26 unverified and 0 contradicted.
 
 ### 7a. Automatic observed cross-check (the "actuals" layer)
 
@@ -167,12 +149,9 @@ Manual validation is a spot-check; it cannot cover every flag, because minor
 real anomalies leave no public record. The systematic check is an independent
 observational dataset. For each city with a genuine local station (≤35 km),
 `scripts/fetch_observed.py` pulls **observed daily station data: NOAA ISD /
-GHCN-Daily via the Meteostat library** (free, CC-BY). Agreement is measured
-across **every overlapping day since 2010**, flagged and unflagged alike, so
-the number is unbiased: a day counts as a match when ERA5's max and min both
+GHCN-Daily via the Meteostat library** (free, CC-BY). Agreement is measured across **every overlapping day since 2010**, flagged and unflagged alike, so flag selection does not bias the rate. A day counts as a match when ERA5's max and min both
 sit within ±3 °C of the station's (a tolerance, because a station and a ~9–31
-km grid cell legitimately differ by a few degrees). Current result: **≈77% of
-~132,000 city-days** across the 41 cities with a station. Individual flags (all
+km grid cell legitimately differ by a few degrees). All-day result: **77%, or 101,203 of 132,205 city-days**, across the 41 cities with a station. The rate describes those 41 station sites, which include airports and aerodromes; it does not estimate ERA5 accuracy for the wider grid. Individual flags (all
 four temperature types) also carry a per-event agree/differs badge. The 21
 remaining cities, the high Himalaya (no station) and snow (no observational
 product anywhere), stay single-source and are labelled. A "differs" flags a
@@ -192,8 +171,7 @@ its warm-night agreement runs below its daytime agreement.
 - Percentile indices say nothing about duration or spatial extent; a
   three-day heatwave appears as three independent daily flags.
 - IMD heatwave definitions (absolute thresholds plus departures) are the
-  operationally relevant standard in India and are not yet implemented;
-  planned as a companion flag set.
+  operationally relevant standard in India and are not implemented.
 
 ## 8b. IMD gridded-rainfall cross-check (built)
 
@@ -201,25 +179,20 @@ A second, independent, India-official rain source now corroborates the heavy-
 precipitation flags. `scripts/fetch_imd_rain.py` pulls **IMD gridded daily
 rainfall (0.25°, Pai et al. 2014)** via the `imdlib` package (free, direct from
 IMD Pune) and extracts each city's grid cell. It is gauge-interpolated
-(genuinely independent of ERA5 reanalysis) and covers all of India, so it
+(independent of ERA5 reanalysis) and covers all of India, so it
 checks cities with no NOAA station too. For every heavy-rain flag the pipeline
 marks whether IMD also recorded meaningful rain (≥1 mm and ≥⅓ of ERA5's value)
-within **±1 day**: the window absorbs the mismatch between IMD's 0830–0830 IST
+within **±1 day**: the largest IMD value across the three days is compared with ERA5's value. The window absorbs the mismatch between IMD's 0830–0830 IST
 accumulation boundary and ERA5's daily boundary, which otherwise scores a
-downpour landing on adjacent calendar dates as a false "disagree" (exact-date
-match gives ~50%; the ±1-day figure is ~74% across all ERA5 heavy-rain flags).
+downpour landing on adjacent calendar dates as a false "disagree" (exact-date match gives ~50%, not recomputed; the ±1-day figure is ~74% across all ERA5 heavy-rain flags).
 Rain still confirms less often than temperature because reanalysis rainfall is
-genuinely harder to place at grid scale; the UI states that rain flags carry
-more caution. Limits, all disclosed: the IMD archive ends 2025 (2026 flags
+harder to place at grid scale; the UI states that rain flags carry
+more caution. Limits, all disclosed: the IMD archive ends 2025 (as of July 2026; 2026 flags
 aren't yet checkable), IMD gridded rain underestimates in very wet regions
 (Western Ghats, NE) and thins after 2008, there is **no** IMD snow or fine-
 resolution temperature product, and per-station daily data stays gated behind
 the paid IMD-DSP portal. Data is free but not open-licensed (cite Pai et al.
 2014; non-commercial reproduction restriction).
-
-*Future:* if IMD's public API (`api.imd.gov.in`, access requested July 2026)
-grants station-level actuals, it would supersede this gridded layer for the
-cities it covers, plugging into the same event-level agreement slot.
 
 ## 9. References
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build per-city seasonal-anomaly datasets from ERA5 reanalysis (v2).
+"""Build per-city seasonal-anomaly datasets from ERA5 reanalysis.
 
 Method summary (see docs/methodology.md for the full treatment):
 
@@ -12,8 +12,8 @@ Method summary (see docs/methodology.md for the full treatment):
   precipitation on wet days (>= 1 mm) above the seasonal 95th percentile.
 - Seasonal comparison uses a 5-day window centred on each calendar day
   (ETCCDI convention), pooled across the 1991-2020 baseline: ~150 values.
-- Percentiles are midrank-based exceedance fractions, not interpolated
-  quantiles: pct(x) = (#pool < x + 0.5 * #pool == x) / n. Every flag is
+- Percentiles are midrank-based exceedance fractions computed from ranks
+  without interpolated quantiles: pct(x) = (#pool < x + 0.5 * #pool == x) / n. Every flag is
   therefore reportable as "exceeded k of n comparable baseline days".
 - For days inside the baseline period the pooled values from the same year
   are excluded (leave-one-year-out) so in-base years are judged against the
@@ -59,7 +59,7 @@ IMD_DIR = REPO_ROOT / "imd_cache"
 # how close ERA5's value must sit to the nearest station's observed value to
 # call the flag "observation-confirmed". Station and ~9-31 km grid cell
 # legitimately differ by a few degrees, so this is a tolerance on the value,
-# not an exact match — the test is "did ERA5 get the day about right?"
+# not an exact match: the test is "did ERA5 get the day about right?"
 OBS_TEMP_TOL_C = 3.0
 OBS_WET_MM = 1.0
 
@@ -105,7 +105,7 @@ def http_get_json(url: str, attempts: int = 8, backoff: float = 3.0) -> dict[str
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
             last_error = error
             # long historical pulls are call-weighted: a 429 means the minute/
-            # hour quota is spent, so short retries are useless — wait it out
+            # hour quota is spent, so short retries are useless; wait it out
             rate_limited = isinstance(error, urllib.error.HTTPError) and error.code == 429
             wait = min(75 * (attempt + 1), 300) if rate_limited else backoff * (2 ** attempt)
             print(f"  fetch failed ({error}); retrying in {wait:.0f}s", file=sys.stderr)
@@ -707,7 +707,7 @@ def build_kpis(classified, recent_end: dt.date, snow_capable: bool) -> dict[str,
         "cold_nights": sum(1 for day in window if "cold_night" in day["flags"] or "cold_extreme" in day["flags"]),
         "cold_nights_expected": round(0.10 * n_temp) if n_temp else None,
         # the inverse pair, completing the ETCCDI 2x2: warm nights (TN90p) and
-        # cold days (TX10p). Warm nights are the dominant heat-health signal.
+        # cold days (TX10p).
         "warm_nights": sum(1 for day in window if "warm_night" in day["flags"] or "warm_night_extreme" in day["flags"]),
         "warm_nights_expected": round(0.10 * n_temp) if n_temp else None,
         "cold_days": sum(1 for day in window if "cold_day" in day["flags"] or "cold_day_extreme" in day["flags"]),
@@ -830,7 +830,7 @@ IMD_RATIO = 0.33
 def _imd_best(imd_rain: dict[str, float], date_iso: str) -> tuple[float | None, float | None]:
     """Best IMD rainfall within ±1 day of the date, and the exact-day value.
     The ±1-day window absorbs the day-boundary mismatch between IMD's
-    0830-0830 IST accumulation and ERA5's daily aggregation — a storm can
+    0830-0830 IST accumulation and ERA5's daily aggregation: a storm can
     land on adjacent calendar dates in the two products."""
     exact = imd_rain.get(date_iso)
     base = dt.date.fromisoformat(date_iso)
@@ -860,9 +860,7 @@ def attach_imd_rain(events: list[dict[str, Any]], imd_rain: dict[str, float]) ->
 
 
 def obs_all_day_agreement(records: list[dict[str, Any]], obs: dict) -> dict[str, int]:
-    """ERA5-vs-station agreement across EVERY overlapping day, not just the
-    strongest flagged events — an unbiased accuracy figure. Counts a day as a
-    match when ERA5's max (and min) sit within the tolerance of the station's."""
+    """ERA5-vs-station agreement across EVERY overlapping day, flagged and unflagged alike, giving an accuracy figure. A day counts as a match when ERA5's max (and min) sit within the tolerance of the station's."""
     days = agree = 0
     for record in records:
         o = obs.get(record["date"])
@@ -991,7 +989,7 @@ def main() -> int:
             validation_summary[status] += 1
 
     # automatic observed cross-check: ERA5 vs nearest station, measured across
-    # EVERY overlapping day (an unbiased accuracy figure), not just the flags
+    # EVERY overlapping day (an accuracy figure), flagged and unflagged alike
     observed_summary = {
         "cities_with_station": sum(1 for e in index_entries if e["observed"]["has_station"]),
         "cities_total": len(index_entries),
@@ -1000,7 +998,7 @@ def main() -> int:
         "tolerance_c": OBS_TEMP_TOL_C,
         "note": (
             "ERA5 daily max & min vs the nearest station (NOAA ISD/GHCN via Meteostat), across "
-            "every overlapping day since 2010 — not only flagged events. Snow and the high "
+            "every overlapping day since 2010, including unflagged days. Snow and the high "
             "Himalaya have no nearby station and stay single-source."
         ),
     }
@@ -1014,7 +1012,7 @@ def main() -> int:
         "note": (
             "Every ERA5 heavy-rain flag cross-checked against IMD gridded daily rainfall (0.25 deg, "
             "Pai et al. 2014, gauge-based, independent of ERA5), within +/-1 day to absorb the "
-            "0830-IST accumulation-boundary mismatch. Archive ends 2025, so 2026 flags aren't yet "
+            "0830-IST accumulation-boundary mismatch. Archive ends 2025 (as of July 2026), so 2026 flags aren't yet "
             "checkable; IMD has no snow or fine-resolution temperature product."
         ),
     }
@@ -1029,7 +1027,7 @@ def main() -> int:
         "model_note": (
             "ERA5-Land (~9 km) blended with ERA5 (~31 km) via Open-Meteo era5_seamless; "
             "snowfall comes from ERA5 because ERA5-Land does not provide it. "
-            "All values are reanalysis estimates, not station observations."
+            "All values are reanalysis estimates."
         ),
         "baseline": {"start": BASE_START.isoformat(), "end": BASE_END.isoformat()},
         "record_start": FULL_START.isoformat(),

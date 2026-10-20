@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Fetch observed daily station data (Meteostat → NOAA ISD/GHCN) for every
 city that has a matched station in stations.json. This is the independent
-ground-truth layer: real measurements to check ERA5 against, not another
-model. Writes obs_cache/<city_id>.csv.gz (date, tmax, tmin, prcp).
+ground-truth layer: real measurements to check ERA5 against, which are independent of any model. Writes obs_cache/<city_id>.csv.gz (date, tmax, tmin, prcp).
 
 Runs in GitHub Actions like the ERA5 refresh; Meteostat is free (CC-BY) and
-needs no key. Temperature is the rigorous cross-check; precipitation is
+needs no key. Temperature is the primary cross-check; precipitation is
 present but sparser and treated as wet/dry corroboration only."""
 
 from __future__ import annotations

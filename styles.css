@@ -1,14 +1,6 @@
-/* ==========================================================================
-   Unseasonable — India seasonal anomaly tracker
-   Design language: "The Synoptic Record" — an instrument-log aesthetic.
-   Chrome (masthead, panels, rules, type) is achromatic ink on cool
-   blue-grey paper; colour is reserved for the data itself — chart marks,
-   the verdict wash, KPI accents, tape ticks, badges. Flat surfaces, hard
-   1px rules, no shadows, no radius beyond a hairline chamfer.
-     terracotta(mark-heat) = heat · blue(mark-cold) = cold ·
-     teal(mark-precip) = precipitation · violet(mark-snow) = snow ·
-     ochre = thresholds/reference · navy = structure/method
-   ========================================================================== */
+/* Unseasonable: India seasonal anomaly tracker.
+   Colours: terracotta = heat, blue = cold, teal = precipitation, violet = snow,
+   ochre = thresholds and reference lines, navy = structure and method. */
 
 :root {
   /* -- chrome: achromatic ink on cool paper -- */
@@ -19,8 +11,7 @@
   --plate: #f6f8f7;
   --graticule: #c6d2d2;
 
-  /* -- data marks: colourblind-validated, exact values consumed by the
-     hand-built SVG charts in app.js. Do not retune. -- */
+  /* -- data marks (also used by the SVG charts in app.js) -- */
   --mark-heat: #c25541;
   --mark-cold: #4478b8;
   --mark-precip: #159b7e;
@@ -45,17 +36,13 @@
   --mark-snow-ink: #6d4a99;
   --ochre-ink: #8a5713;
 
-  /* -- back-compat: app.js writes a few inline style="color:var(--slate)"
-     / var(--mist) attributes directly. Keep these tokens live and mapped
-     onto the new hierarchy so those inline colours stay correct. -- */
+  /* -- aliases used by inline styles in app.js -- */
   --slate: var(--marginalia);
   --mist: var(--ink-faint);
 
   --radius: 2px;
 
-  /* -- one traditional workhorse sans (Lato) carries the whole page —
-     display/body/mono kept as three names only so the ~90 existing
-     call-sites below don't need touching; all three resolve identically. -- */
+  /* -- single typeface (Lato); display, body and mono are aliases -- */
   --font-display: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-body: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -194,20 +181,6 @@ button { font: inherit; color: inherit; }
   text-anchor: middle;
 }
 
-.rail-soon {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  color: var(--ochre-ink, #8a5713);
-  border: 1px solid var(--graticule);
-  border-radius: var(--radius);
-  padding: 0 5px;
-  margin-left: 6px;
-  white-space: nowrap;
-}
-
 .agri-note {
   font-family: var(--font-body);
   font-style: italic;
@@ -297,19 +270,6 @@ button { font: inherit; color: inherit; }
 
 .hero-search { margin-top: 20px; max-width: 420px; }
 
-.city-search {
-  width: 100%;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  background: var(--plate);
-  padding: 11px 14px;
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  color: var(--ink);
-}
-.city-search::placeholder { color: var(--ink-faint); }
-.city-search:focus-visible { outline-offset: 0; }
-
 /* ---- main / plate layout ------------------------------------------------ */
 
 main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
@@ -323,7 +283,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   margin: 20px 0;
 }
 
-/* registration ticks: two diagonal corners so it reads as intentional framing */
+/* registration ticks on two diagonal corners */
 .plate::before,
 .plate::after {
   content: "";
@@ -343,8 +303,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   margin-bottom: 4px;
 }
 
-/* figure titles are dynamic findings (whole sentences), so sentence case —
-   NOT the tracked all-caps of a short label */
+/* figure titles are whole sentences, so they use sentence case */
 .plate-head h2,
 .plate-head h3 {
   font-size: 16px;
@@ -390,9 +349,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
   filter: grayscale(0.7) contrast(0.95) brightness(1.03);
 }
 
-/* Essential Leaflet layout rules, kept locally because the CDN stylesheet
-   has failed to apply in some environments. Without these, panes fall
-   into normal flow and markers render below the map. */
+/* Essential Leaflet layout rules, kept locally in case the CDN stylesheet fails to load. */
 .leaflet-pane,
 .leaflet-tile,
 .leaflet-marker-icon,
@@ -645,32 +602,6 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 24px 8px; display: block; }
 }
 .elev-note:empty { display: none; }
 .elev-note b { color: var(--ink); font-weight: 700; font-style: normal; }
-
-.live-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  padding: 4px 0 8px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--ink-faint);
-}
-.live-strip .live-chip {
-  background: var(--plate);
-  border: 1px solid var(--graticule);
-  border-radius: var(--radius);
-  padding: 2px 8px;
-  white-space: nowrap;
-  color: var(--marginalia);
-}
-.live-strip .live-tag {
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.live-strip .live-caveat { color: var(--ink-faint); }
 
 /* ---- verdict: the one coloured surface ----------------------------------- */
 

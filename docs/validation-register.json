@@ -1,5 +1,5 @@
 {
-  "description": "Manual validation register. event_id = <city_id>:<date>:<category>. Status: validated (independent observation confirms the condition), corroborated (credible news/forecast consistent, no official measurement), unverified (searched, no public record found; an honest null), contradicted (independent evidence disagrees). Events absent from this file are simply not yet researched. Misses and nulls are kept visible: this is the tool's published evidence log. As of 2026-07-08, 51 events checked across 19 cities: 5 validated, 20 corroborated, 26 no public record, 0 contradicted. Station readings quoted in press differ from ERA5 grid-cell values by 1\u20135 units in several cases; that is the documented station-vs-grid-cell discrepancy rather than contradiction.",
+  "description": "Manual validation register. event_id = <city_id>:<date>:<category>. Status: validated (independent observation confirms the condition), corroborated (credible news/forecast consistent, no official measurement), unverified (no public record found), contradicted (independent evidence disagrees). Events absent from this file are simply not yet researched. Misses and nulls are kept visible: this is the published evidence log. As of 2026-07-08, 51 events checked across 19 cities: 5 validated, 20 corroborated, 26 unverified, 0 contradicted. Press station readings differ from ERA5 grid-cell values by 1\u20135 \u00b0C in several cases. This is a station-versus-grid-cell gap.",
   "updated": "2026-07-08",
   "events": [
     {
@@ -33,7 +33,7 @@
     {
       "event_id": "sonamarg:2025-10-12:cold_extreme",
       "status": "unverified",
-      "note": "Searched Kashmir cold wave October 2025 / Sonamarg minimum temperature mid-October 2025: found an early-October (Oct 3-8) cold snap with no temperature figures, and dated Sonamarg readings (-5.8 to -12.5\u00b0C) only for Dec 2025-Jan 2026. Nothing for Oct 12 specifically; the numerically close -8.3\u00b0C press figure is from Jan 19, 2026 and was not stretched to cover this event.",
+      "note": "No public record for Sonamarg on Oct 12, 2025. An early-October (Oct 3-8) cold snap is reported without temperature figures, and dated Sonamarg readings (-5.8 to -12.5\u00b0C) exist only for Dec 2025 to Jan 2026. The -8.3\u00b0C press figure is from Jan 19, 2026 and is not applied to this event.",
       "checked": "2026-07-08"
     },
     {
@@ -60,7 +60,7 @@
     {
       "event_id": "bhopal:2025-08-15:hot_extreme",
       "status": "corroborated",
-      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly: a seasonal-percentile exceedance rather than a newsworthy heatwave.",
+      "note": "Free Press Journal (Aug 8-15, 2025): roughly two-week monsoon-break/dry spell in MP with Bhopal receiving only light rain through Aug 14-15. Supports the dry-spell explanation for the warm anomaly, which is a seasonal-percentile exceedance with no reported heatwave.",
       "evidence_url": "https://www.freepressjournal.in/bhopal/madhya-pradesh-august-13-2025-weather-update-79-rainfall-in-state-drought-hits-indore-ujjain-while-heavy-rain-alerts-for-several-districts-today",
       "checked": "2026-07-08"
     },
@@ -102,13 +102,13 @@
     {
       "event_id": "bengaluru:2025-08-25:cold_extreme",
       "status": "unverified",
-      "note": "Searched Bengaluru cool/cloudy weather, heavy rain, waterlogging, and IMD alerts around Aug 25, 2025; found only general August climate averages and unrelated dated rain events (July, Oct 2025). A cloudy monsoon cool day plausibly generates no coverage; the flag remains reanalysis-only.",
+      "note": "No public report for Bengaluru around Aug 25, 2025. Only general August climate averages and unrelated rain events (July and Oct 2025) exist. A cloudy monsoon cool day plausibly generates no coverage; the flag remains reanalysis-only.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "new-delhi:2023-10-09:hot_extreme",
       "status": "unverified",
-      "note": "Searched news + weather archives for Delhi 9 Oct 2023 heat; Oct 2023 monthly max ~35.4\u00b0C but nothing confirms ~36.5\u00b0C on that date. No contradiction.",
+      "note": "No public report for Delhi on Oct 9, 2023. The October 2023 monthly maximum was ~35.4\u00b0C, and nothing confirms ~36.5\u00b0C on that date. No contradiction.",
       "checked": "2026-07-08"
     },
     {
@@ -128,7 +128,7 @@
     {
       "event_id": "mumbai:2023-09-01:hot_extreme",
       "status": "unverified",
-      "note": "Searched for Mumbai warm/humid conditions on 1 Sep 2023; found only September seasonal averages, no date-specific report.",
+      "note": "No date-specific public report for Mumbai, 1 Sep 2023; only September seasonal averages exist.",
       "checked": "2026-07-08"
     },
     {
@@ -155,13 +155,13 @@
     {
       "event_id": "jaipur:2025-10-09:cold_extreme",
       "status": "unverified",
-      "note": "Searched Jaipur Oct 2025 early cold; typical October lows near 15.5\u00b0C consistent with the flag but no source confirms 9 Oct 2025 specifically.",
+      "note": "No source confirms Jaipur on Oct 9, 2025 specifically. Typical October lows near 15.5\u00b0C are consistent with the flag.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "jaipur:2023-09-16:heavy_precip",
       "status": "unverified",
-      "note": "Searched Jaipur rainfall 16 Sep 2023; only regional IMD data (Sep 2023 ~113% of normal nationally), no city/date-specific figure.",
+      "note": "No city or date-specific figure for Jaipur on Sep 16, 2023. Only regional IMD data exist (Sep 2023 ~113% of normal nationally).",
       "checked": "2026-07-08"
     },
     {
@@ -174,7 +174,7 @@
     {
       "event_id": "jodhpur:2025-10-09:cold_extreme",
       "status": "unverified",
-      "note": "Searched Jodhpur / Rajasthan unseasonable cold Oct 2025 and date variants; no news, weather report or IMD data found.",
+      "note": "No news, weather report or IMD data found for unseasonable cold in Jodhpur or Rajasthan in Oct 2025.",
       "checked": "2026-07-08"
     },
     {
@@ -186,13 +186,13 @@
     {
       "event_id": "chandigarh:2024-07-29:hot_extreme",
       "status": "unverified",
-      "note": "Searched Chandigarh late-July 2024 heat; no date-specific corroboration found.",
+      "note": "No date-specific corroboration for Chandigarh in late July 2024.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "chandigarh:2024-05-02:cold_extreme",
       "status": "unverified",
-      "note": "A subagent proposed 'contradicted' from May-2024 being rainless with 46\u00b0C peak heat, but the flag is a cool NIGHT: our data has 2 May 2024 at min 15.5\u00b0C / max 33.4\u00b0C / 0mm: a clear dry night rather than rain-cooled, and consistent with a pre-heatwave airmass. No direct evidence on the night min itself, so recorded as no-public-record rather than contradicted.",
+      "note": "The flag is a cool night: our data has 2 May 2024 at min 15.5\u00b0C / max 33.4\u00b0C / 0mm, a clear dry night with no rain to cool it, and consistent with a pre-heatwave airmass. No direct evidence on the night min itself, so recorded as no-public-record.",
       "checked": "2026-07-08"
     },
     {
@@ -205,19 +205,19 @@
     {
       "event_id": "lucknow:2023-09-02:hot_extreme",
       "status": "unverified",
-      "note": "Searched Lucknow warm day 2 Sep 2023; no date-specific report found.",
+      "note": "No date-specific report for a warm day in Lucknow on Sep 2, 2023.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "lucknow:2024-02-10:cold_extreme",
       "status": "unverified",
-      "note": "Searched Lucknow cold 10 Feb 2024; no date-specific report found.",
+      "note": "No date-specific report for a cold day in Lucknow on Feb 10, 2024.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "lucknow:2024-08-28:heavy_precip",
       "status": "unverified",
-      "note": "Searched Lucknow heavy rain 28 Aug 2024; no date-specific report found.",
+      "note": "No date-specific report for heavy rain in Lucknow on Aug 28, 2024.",
       "checked": "2026-07-08"
     },
     {
@@ -257,7 +257,7 @@
     {
       "event_id": "chennai:2023-09-18:heavy_precip",
       "status": "unverified",
-      "note": "Searched Chennai rain 18 Sep 2023; no date-specific report found.",
+      "note": "No date-specific report for rain in Chennai on Sep 18, 2023.",
       "checked": "2026-07-08"
     },
     {
@@ -270,55 +270,55 @@
     {
       "event_id": "guwahati:2023-08-01:hot_extreme",
       "status": "unverified",
-      "note": "Searched; no date-specific report for a warm 1 Aug 2023 in Guwahati.",
+      "note": "No date-specific report for a warm day in Guwahati on Aug 1, 2023.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "guwahati:2024-07-02:cold_extreme",
       "status": "unverified",
-      "note": "A cool monsoon day; searched, no public coverage found.",
+      "note": "A cool monsoon day; no public coverage found.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "guwahati:2023-10-03:heavy_precip",
       "status": "unverified",
-      "note": "Searched; the well-documented 3\u20135 Oct 2023 disaster was the Sikkim GLOF / North Bengal floods ~500km away, which does not match Guwahati, so no corroboration claimed.",
+      "note": "The well-documented Oct 3-5, 2023 disaster was the Sikkim GLOF / North Bengal floods ~500km away, which does not match Guwahati, so no corroboration is claimed.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "shillong:2023-08-01:hot_extreme",
       "status": "unverified",
-      "note": "Warm-for-a-hill-station day; searched, no public coverage found.",
+      "note": "Warm for a hill station; no public coverage found.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "shillong:2026-05-02:cold_extreme",
       "status": "unverified",
-      "note": "Searched; no date-specific report found.",
+      "note": "No date-specific report found.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "gangtok:2023-09-02:hot_extreme",
       "status": "unverified",
-      "note": "Warm-for-a-hill-station day; searched, no public coverage found.",
+      "note": "Warm for a hill station; no public coverage found.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "gangtok:2026-05-11:cold_extreme",
       "status": "unverified",
-      "note": "Searched; no date-specific report found.",
+      "note": "No date-specific report found.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "gangtok:2024-02-22:heavy_precip",
       "status": "unverified",
-      "note": "Searched Gangtok/Sikkim precipitation 22 Feb 2024; no date-specific report found.",
+      "note": "No date-specific report for Gangtok/Sikkim precipitation on Feb 22, 2024.",
       "checked": "2026-07-08"
     },
     {
       "event_id": "darjeeling:2023-09-05:hot_extreme",
       "status": "unverified",
-      "note": "Warm-for-a-hill-station day; searched, no public coverage found.",
+      "note": "Warm for a hill station; no public coverage found.",
       "checked": "2026-07-08"
     },
     {
@@ -330,7 +330,7 @@
     {
       "event_id": "darjeeling:2023-08-25:heavy_precip",
       "status": "unverified",
-      "note": "Searched Darjeeling heavy rain 25 Aug 2023; no date-specific report found.",
+      "note": "No date-specific report for Darjeeling heavy rain on Aug 25, 2023.",
       "checked": "2026-07-08"
     }
   ]
